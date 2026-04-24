@@ -126,6 +126,14 @@ export interface ReconcileRequest {
   analysisDepth?: 'basic' | 'standard' | 'deep'; // default: standard
 }
 
+// Actual API response from backend
+export interface ReconcileApiResponse {
+  status: 'complete' | 'processing' | 'failed';
+  progress: number;
+  result: ReconciliationResult;
+}
+
+// For type compatibility with generic response handling
 export interface ReconcileResponse {
   result: ReconciliationResult;
 }
