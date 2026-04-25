@@ -82,16 +82,23 @@ export default function MappingTable({ result }: Props) {
     })
   }
 
-  const handleLoadTemplate = (template: { reviewedIndices: number[]; expandedIndices: number[] }) => {
-    setReviewed(new Set(template.reviewedIndices))
-    setExpanded(new Set(template.expandedIndices))
-    addHistoryEntry({
-      actionType: 'template_loaded',
-      mappingId: 'template',
-      tableName: 'Template',
-      description: `Loaded template with ${template.reviewedIndices.length} reviewed mappings`,
-    })
-  }
+  const handleLoadTemplate = (template: {
+  reviewedIndices?: number[]
+  expandedIndices?: number[]
+}) => {
+  const reviewedIndices = template.reviewedIndices ?? []
+  const expandedIndices = template.expandedIndices ?? []
+
+  setReviewed(new Set(reviewedIndices))
+  setExpanded(new Set(expandedIndices))
+
+  addHistoryEntry({
+    actionType: 'template_loaded',
+    mappingId: 'template',
+    tableName: 'Template',
+    description: `Loaded template with ${reviewedIndices.length} reviewed mappings`,
+  })
+}
 
   const handleDeleteTemplate = (templateId: string) => {
     deleteTemplateFromStorage(templateId)
