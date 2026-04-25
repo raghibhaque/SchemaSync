@@ -27,6 +27,7 @@ import TemplateManager from './TemplateManager'
 import HistoryPanel from './HistoryPanel'
 import ExportDrawer from './ExportDrawer'
 import TableStatisticsCard from './TableStatisticsCard'
+import SchemaSummaryCard from './SchemaSummaryCard'
 
 interface Props {
   result: ReconciliationResult
@@ -344,6 +345,8 @@ export default function MappingTable({ result }: Props) {
 
   return (
     <div className="space-y-6">
+      <SchemaSummaryCard result={result} />
+
       <div className="flex items-center justify-between gap-4">
         <BulkActionBar
           selectedCount={selectedForBulk.size}
