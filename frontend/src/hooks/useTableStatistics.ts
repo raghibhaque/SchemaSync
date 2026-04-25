@@ -38,9 +38,6 @@ export function useTableStatistics(result: ReconciliationResult) {
         name: sourceTable.name,
         columnCount: sourceColumns.length,
         dataTypes: sourceDataTypes,
-        primaryKey: sourceTable.primary_key,
-        indexes: sourceTable.indexes?.length || 0,
-        uniqueConstraints: sourceTable.unique_constraints?.length || 0,
       }
 
       // Get target table stats
@@ -57,9 +54,6 @@ export function useTableStatistics(result: ReconciliationResult) {
         name: targetTable.name,
         columnCount: targetColumns.length,
         dataTypes: targetDataTypes,
-        primaryKey: targetTable.primary_key,
-        indexes: targetTable.indexes?.length || 0,
-        uniqueConstraints: targetTable.unique_constraints?.length || 0,
       }
 
       // Calculate mapping stats

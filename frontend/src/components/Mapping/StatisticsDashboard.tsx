@@ -58,20 +58,6 @@ export default function StatisticsDashboard({ result }: Props) {
     const unmappedColumns = Math.max(totalSourceColumns - totalMappedColumns, totalTargetColumns - totalMappedColumns)
     const mappingCompleteness = totalMappedColumns > 0 ? Math.round((totalMappedColumns / Math.max(totalSourceColumns, totalTargetColumns)) * 100) : 0
     const qualityScore = ((totalHighConfidence / tableCount) * 100 || 0).toFixed(1)
-    const conflictRate = totalMappedColumns > 0 ? ((totalTypeConflicts / totalMappedColumns) * 100).toFixed(1) : '0'
-
-    const containerVariants = {
-      hidden: { opacity: 0 },
-      show: {
-        opacity: 1,
-        transition: { staggerChildren: 0.06 },
-      },
-    }
-
-    const itemVariants = {
-      hidden: { opacity: 0, y: 8 },
-      show: { opacity: 1, y: 0 },
-    }
 
     const metrics: StatMetric[] = [
       {

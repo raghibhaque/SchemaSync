@@ -27,7 +27,7 @@ export default function StatisticsExportPanel({ result, isOpen, onClose }: Props
 
   if (!isOpen) return null
 
-  const schemaName = result.summary?.schema_name || 'Schema'
+  const schemaName = 'Schema'
   const exportData = generateStatisticsExport(result, schemaName)
 
   const handleExport = async (format: ExportFormat) => {

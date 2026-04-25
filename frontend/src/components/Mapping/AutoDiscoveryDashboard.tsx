@@ -37,52 +37,52 @@ export default function AutoDiscoveryDashboard({
 
   const lowConfidenceMappings = result.table_mappings?.filter(m => m.confidence < 0.6).length ?? 0
 
-  const cards: DiscoveryCard[] = [
+  const cards = [
     {
-      id: 'unreviewed',
+      id: 'unreviewed' as const,
       title: 'Unreviewed Mappings',
       description: 'Mappings awaiting your review',
       count: unreviewed,
       icon: <AlertCircle className="h-5 w-5" />,
       color: 'text-amber-300',
       bgColor: 'from-amber-500/20 to-amber-500/10',
-      priority: unreviewed > 10 ? 'critical' : 'high',
+      priority: (unreviewed > 10 ? 'critical' : 'high') as 'critical' | 'high',
       action: 'Review Now',
     },
     {
-      id: 'conflicts',
+      id: 'conflicts' as const,
       title: 'Conflicts Needing Resolution',
       description: 'Mappings with conflicting suggestions',
       count: conflictCount,
       icon: <Zap className="h-5 w-5" />,
       color: 'text-rose-300',
       bgColor: 'from-rose-500/20 to-rose-500/10',
-      priority: (conflictCount > 5 ? 'critical' : 'high'),
+      priority: (conflictCount > 5 ? 'critical' : 'high') as 'critical' | 'high',
       action: 'Resolve Conflicts',
     },
     {
-      id: 'type-conversions',
+      id: 'type-conversions' as const,
       title: 'Type Conversions Required',
       description: 'Mappings with type mismatches needing conversion',
       count: typeConversionsNeeded,
       icon: <TrendingUp className="h-5 w-5" />,
       color: 'text-indigo-300',
       bgColor: 'from-indigo-500/20 to-indigo-500/10',
-      priority: (typeConversionsNeeded > 5 ? 'high' : 'medium'),
+      priority: (typeConversionsNeeded > 5 ? 'high' : 'medium') as 'high' | 'medium',
       action: 'Define Conversions',
     },
     {
-      id: 'low-confidence',
+      id: 'low-confidence' as const,
       title: 'Low Confidence Mappings',
       description: 'Mappings with confidence below 60%',
       count: lowConfidenceMappings,
       icon: <AlertCircle className="h-5 w-5" />,
       color: 'text-amber-300',
       bgColor: 'from-amber-500/20 to-amber-500/10',
-      priority: (lowConfidenceMappings > 3 ? 'high' : 'medium'),
+      priority: (lowConfidenceMappings > 3 ? 'high' : 'medium') as 'high' | 'medium',
       action: 'Review Quality',
     },
-  ].filter(card => card.count > 0)
+  ].filter(card => card.count > 0) as DiscoveryCard[]
 
   const criticalCards = cards.filter(c => c.priority === 'critical')
   const highCards = cards.filter(c => c.priority === 'high')

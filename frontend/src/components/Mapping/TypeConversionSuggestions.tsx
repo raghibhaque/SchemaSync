@@ -13,7 +13,6 @@ interface Props {
 export default function TypeConversionSuggestions({
   sourceType,
   targetType,
-  onSelectConversion,
 }: Props) {
   const conversions = useTypeConversions(sourceType, targetType)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)

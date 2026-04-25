@@ -12,7 +12,7 @@ interface Props {
   mapping?: TableMapping
 }
 
-export default function TableStatisticsCard({ stats, isExpanded = false, mapping }: Props) {
+export default function TableStatisticsCard({ stats, mapping }: Props) {
   const [showDetails, setShowDetails] = useState(false)
   const dataTypeEntries = [
     ...Object.entries(stats.sourceTable.dataTypes).slice(0, 3),

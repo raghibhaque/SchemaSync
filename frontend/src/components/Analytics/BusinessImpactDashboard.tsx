@@ -6,8 +6,6 @@ import type { ReconciliationResult } from '../../types'
 import {
   calculateBusinessImpactMetrics,
   getTopIssues,
-  formatTimeSaved,
-  type BusinessImpactMetrics,
 } from '../../lib/businessImpactCalculations'
 
 interface Props {

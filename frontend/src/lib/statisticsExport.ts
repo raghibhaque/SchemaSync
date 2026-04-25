@@ -1,4 +1,4 @@
-import type { ReconciliationResult, TableMapping } from '../types'
+import type { ReconciliationResult } from '../types'
 
 export interface StatisticsExport {
   exportDate: string

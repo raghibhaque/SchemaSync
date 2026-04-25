@@ -169,7 +169,6 @@ function generateNameConflictExplanation(conflict: ConflictData, severity: 'crit
 }
 
 function generateAmbiguityConflictExplanation(conflict: ConflictData, severity: 'critical' | 'warning' | 'info'): ConflictExplanation {
-  const topAlternative = (conflict.alternativeMatches || [])[0]
   const highConfidenceAlternatives = (conflict.alternativeMatches || []).filter(m => m.confidence > 0.85)
 
   return {

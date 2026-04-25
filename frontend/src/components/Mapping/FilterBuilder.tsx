@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function FilterBuilder({ onFilterChange, onExport }: Props) {
-  const { profiles, activeProfile, setActiveProfile, createProfile, updateProfile, deleteProfile } = useAdvancedFilters()
+  const { profiles, activeProfile, setActiveProfile, createProfile, deleteProfile } = useAdvancedFilters()
   const [showBuilder, setShowBuilder] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
   const [conditions, setConditions] = useState<FilterCondition[]>([])

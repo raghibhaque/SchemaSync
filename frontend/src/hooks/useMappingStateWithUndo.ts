@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { useUndoRedo } from './useUndoRedo'
 
 export interface MappingTableState {

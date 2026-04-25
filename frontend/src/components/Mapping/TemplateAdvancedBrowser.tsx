@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Copy, Download, Upload, Trash2, Star, Clock, TrendingUp, Save } from 'lucide-react'
+import { Search, Copy, Download, Trash2, Star, Clock, TrendingUp, Save } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { MappingTemplate, WorkspaceSnapshot, exportTemplate, importTemplate } from '../../hooks/useTemplates'
+import { MappingTemplate, WorkspaceSnapshot, exportTemplate } from '../../hooks/useTemplates'
 
 interface Props {
   templates: MappingTemplate[]

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type FilterOperator = 'equals' | 'contains' | 'greater_than' | 'less_than' | 'is_in' | 'range'
 export type FilterLogic = 'AND' | 'OR'

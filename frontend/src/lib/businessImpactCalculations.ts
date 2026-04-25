@@ -1,4 +1,4 @@
-import type { ReconciliationResult, TableMapping, ColumnMapping } from '../types'
+import type { ReconciliationResult } from '../types'
 
 export interface BusinessImpactMetrics {
   totalMappings: number

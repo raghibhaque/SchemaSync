@@ -196,7 +196,7 @@ export default function TemplateManager({
                       <p className={`text-[10px] ${
                         isDarkMode ? 'text-white/40' : 'text-slate-500'
                       }`}>
-                        {template.reviewedIndices.length} reviewed, {template.expandedIndices.length} expanded
+                        {(template.reviewedIndices?.length ?? 0)} reviewed, {(template.expandedIndices?.length ?? 0)} expanded
                       </p>
                     </button>
                     <motion.button

@@ -22,7 +22,7 @@ export function useConflictPatterns(mappings: TableMapping[] | null | undefined)
       mapping.column_mappings?.forEach(col => {
         if (!col.conflicts || col.conflicts.length === 0) return
 
-        col.conflicts.forEach(() => {
+        col.conflicts.forEach((conflict: any) => {
           const sourceType = col.col_a.data_type?.base_type || 'unknown'
           const targetType = col.col_b.data_type?.base_type || 'unknown'
 

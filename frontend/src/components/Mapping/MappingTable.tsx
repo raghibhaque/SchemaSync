@@ -30,7 +30,6 @@ import MappingDiffView from './MappingDiffView'
 import TemplateManager from './TemplateManager'
 import HistoryPanel from './HistoryPanel'
 import ExportDrawer from './ExportDrawer'
-import UndoRedoBar from './UndoRedoBar'
 import BatchConflictResolutionPanel from './BatchConflictResolutionPanel'
 import AdvancedFilterBuilder, { type AdvancedFilterCriteria } from './AdvancedFilterBuilder'
 import AutoDiscoveryDashboard from './AutoDiscoveryDashboard'
@@ -89,7 +88,7 @@ export default function MappingTable({ result }: Props) {
 
   // Initialize review state management
   const { approve, reject, markModified, reset, getStatus, stats: reviewStats, getStatuses } = useReviewState(schemaHash)
-  const { filteredMappings, activeFilters, setReviewStatusFilter, setConflictsFilter, setConfidenceFilter, resetFilters } = useReviewFilters(result.table_mappings ?? [], getStatuses())
+  const { activeFilters, setReviewStatusFilter, setConflictsFilter, resetFilters } = useReviewFilters(result.table_mappings ?? [], getStatuses())
   const { canUndo, canRedo, undo, redo } = useReviewHistory()
 
   const { templates, saveTemplate: saveTemplateToStorage, deleteTemplate: deleteTemplateFromStorage } = useTemplates(schemaHash)
@@ -441,7 +440,7 @@ export default function MappingTable({ result }: Props) {
             result={result}
             reviewedCount={reviewed.size}
             conflictCount={conflictStats.total}
-            onApplyQuickFilter={(filterId) => {
+            onApplyQuickFilter={() => {
               setShowAutoDiscovery(false)
             }}
           />
