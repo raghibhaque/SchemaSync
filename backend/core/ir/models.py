@@ -207,6 +207,18 @@ class Schema:
 
 # ── Reconciliation result models ────────────────────────────────────────
 
+def _confidence_tier(score: float) -> str:
+    if score >= 0.95:
+        return "exact"
+    if score >= 0.80:
+        return "high"
+    if score >= 0.60:
+        return "medium"
+    if score >= 0.40:
+        return "low"
+    return "uncertain"
+
+
 @dataclass
 class ColumnMapping:
     source_table: str
@@ -231,6 +243,7 @@ class ColumnMapping:
             "structural_score": round(self.structural_score, 4),
             "semantic_score": round(self.semantic_score, 4),
             "combined_score": round(self.combined_score, 4),
+            "confidence_tier": _confidence_tier(self.combined_score),
             "match_reason": self.match_reason,
         }
 
@@ -254,6 +267,7 @@ class TableMapping:
             "structural_score": round(self.structural_score, 4),
             "semantic_score": round(self.semantic_score, 4),
             "combined_score": round(self.combined_score, 4),
+            "confidence_tier": _confidence_tier(self.combined_score),
             "column_mappings": [cm.to_dict() for cm in self.column_mappings],
             "unmatched_source": self.unmatched_source,
             "unmatched_target": self.unmatched_target,
@@ -304,17 +318,29 @@ class ReconciliationResult:
     def summary(self) -> dict:
         total_tables = len(self.table_mappings)
         total_columns = sum(len(tm.column_mappings) for tm in self.table_mappings)
-        avg_confidence = (
-            sum(tm.combined_score for tm in self.table_mappings) / total_tables
-            if total_tables > 0 else 0.0
+        scores = [tm.combined_score for tm in self.table_mappings]
+        avg_confidence = sum(scores) / total_tables if total_tables > 0 else 0.0
+
+        distribution: dict[str, int] = {"exact": 0, "high": 0, "medium": 0, "low": 0, "uncertain": 0}
+        for s in scores:
+            distribution[_confidence_tier(s)] += 1
+
+        total_unmatched_cols = sum(
+            len(tm.unmatched_source) + len(tm.unmatched_target)
+            for tm in self.table_mappings
         )
+
         return {
             "tables_matched": total_tables,
             "columns_matched": total_columns,
+            "total_unmatched_columns": total_unmatched_cols,
             "unmatched_source_tables": len(self.unmatched_source_tables),
             "unmatched_target_tables": len(self.unmatched_target_tables),
             "conflicts": len(self.conflicts),
             "avg_confidence": round(avg_confidence, 4),
+            "min_confidence": round(min(scores), 4) if scores else 0.0,
+            "max_confidence": round(max(scores), 4) if scores else 0.0,
+            "confidence_distribution": distribution,
         }
 
     def to_dict(self) -> dict:
