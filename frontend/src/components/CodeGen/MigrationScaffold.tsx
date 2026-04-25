@@ -13,10 +13,10 @@ export default function MigrationScaffold({ result }: Props) {
 
       <pre className="overflow-x-auto rounded-lg bg-slate-950 p-4 text-sm text-slate-100">
         <code>
-          {typeof result.migrationScaffold === 'string'
-            ? result.migrationScaffold
-            : result.migrationScaffold
-              ? JSON.stringify(result.migrationScaffold, null, 2)
+          {typeof result.migration_scaffold === 'string'
+            ? result.migration_scaffold
+            : result.migration_scaffold
+              ? JSON.stringify(result.migration_scaffold, null, 2)
               : '-- No migration scaffold generated yet.'}
         </code>
       </pre>

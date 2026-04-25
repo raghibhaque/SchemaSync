@@ -12,18 +12,43 @@ export interface SchemaUploadRequest {
   targetSchema: Schema;
 }
 
-// Column mapping types
+// Data type representation
+export interface ColumnDataType {
+  base_type: string;
+}
+
+// Column with type info
+export interface Column {
+  name: string;
+  data_type: ColumnDataType;
+}
+
+// Table structure
+export interface Table {
+  name: string;
+  columns: Column[];
+}
+
+// Column mapping in reconciliation
 export interface ColumnMapping {
-  sourceColumn: string;
-  targetColumn: string;
-  sourceTable: string;
-  targetTable: string;
-  confidence: number; // 0-1
-  type: string;
-  sourcetype?: string;
-  targetType?: string;
-  conflict?: string;
-  reason?: string;
+  col_a: Column;
+  col_b: Column;
+  confidence: number;
+  mapping_type: string;
+  conflicts: unknown[];
+}
+
+// Table mapping in reconciliation
+export interface TableMapping {
+  table_a: Table;
+  table_b: Table;
+  confidence: number;
+  confidence_label: 'LOW' | 'MEDIUM' | 'HIGH';
+  structural_score: number;
+  semantic_score: number;
+  column_mappings: ColumnMapping[];
+  unmatched_columns_a: Column[];
+  unmatched_columns_b: Column[];
 }
 
 // Equivalence graph types
@@ -90,10 +115,6 @@ export interface MigrationScaffold {
 
 // Complete reconciliation result
 export interface ReconciliationResult {
-  id?: string;
-  timestamp?: string;
-  sourceSchema?: Schema;
-  targetSchema?: Schema;
   summary: {
     tables_matched: number;
     tables_in_a: number;
@@ -102,38 +123,55 @@ export interface ReconciliationResult {
     total_conflicts: number;
     critical_conflicts: number;
   };
-  table_mappings: Array<{
-    table_a: { name: string };
-    table_b: { name: string };
-    confidence: number;
-  }>;
+  table_mappings: TableMapping[];
   unmatched_tables_a: string[];
   unmatched_tables_b: string[];
   migration_scaffold: string;
-  mappings?: ColumnMapping[];
-  graph?: EquivalenceGraph;
-  conflicts?: ConflictReport;
-  migrationScaffold?: MigrationScaffold;
-  overallConfidence?: number;
-  status?: 'completed' | 'processing' | 'failed';
-  error?: string;
 }
 
 // API request/response types
 export interface ReconcileRequest {
   sourceSchema: Schema;
   targetSchema: Schema;
-  analysisDepth?: 'basic' | 'standard' | 'deep'; // default: standard
+  analysisDepth?: 'basic' | 'standard' | 'deep';
 }
 
-// Actual API response from backend
+// Upload endpoint response
+export interface UploadResponse {
+  session_id: string;
+  schema_a: {
+    table_count: number;
+    tables: Table[];
+  };
+  schema_b: {
+    table_count: number;
+    tables: Table[];
+  };
+}
+
+// Start reconciliation response
+export interface ReconcileStartResponse {
+  job_id: string;
+}
+
+// Status polling response
+export interface ReconcileStatusResponse {
+  job_id: string;
+  status: 'running' | 'complete' | 'failed';
+  progress: number;
+  current_phase: string;
+  phase_description: string;
+  result: ReconciliationResult | null;
+}
+
+// API response from backend
 export interface ReconcileApiResponse {
   status: 'complete' | 'processing' | 'failed';
   progress: number;
   result: ReconciliationResult;
 }
 
-// For type compatibility with generic response handling
+// For type compatibility
 export interface ReconcileResponse {
   result: ReconciliationResult;
 }
