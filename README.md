@@ -89,12 +89,23 @@ Uses **cosine similarity** on fingerprint vectors to score table pairs structura
 
 ### Layer 2: Semantic Matching
 Understands **meaning** beyond names:
-- Token-based similarity with synonym dictionaries (e.g., "customer" ≈ "user")
-- Optional: Transformer embeddings via `sentence-transformers` (semantic context)
-- Jaccard similarity for column names
-- Levenshtein distance for fuzzy matching
+- **Comprehensive Synonym Dictionaries** — 14 semantic categories:
+  - Identity: `id`, `identifier`, `uid`, `guid`, `pk`, `key`, `oid`, `no`, `nbr`, `nr`
+  - People: `user`, `account`, `member`, `author`, `owner`, `creator`, `person`, `profile`
+  - Timestamps: `created`, `updated`, `deleted` (with 40+ variations)
+  - Content: `content`, `body`, `text`, `html`, `markdown`, `description`, `excerpt`
+  - ...and 10+ more categories for common database patterns
+- **Semantic Tokenization** — Groups synonyms for Jaccard similarity matching
+- **Hybrid Scoring** — 50% semantic weight, 30% name similarity, 20% core name matching
+- **CMS Pattern Recognition** — Special boost for recognized patterns:
+  - Detects `users`, `posts`, `tags`, `comments`, `roles`, `settings` across platforms
+  - Recognizes WordPress (`wp_*`) and Ghost prefixes
+  - Boosts confidence by 12% when both tables match the same CMS pattern
+- **Optional: Transformer Embeddings** via `sentence-transformers` for deeper semantic context
+- **Type Compatibility Scoring** — Numeric, string, date, boolean type categories
+- **Transformation Suggestions** — Auto-proposes safe type conversions
 
-Scores table and column pairs semantically based on name similarity and context.
+Scores table and column pairs semantically based on name similarity, synonyms, and contextual patterns—dramatically improving cross-platform matching (e.g., Ghost CMS to WordPress).
 
 ### Layer 3: Optimal Assignment
 Uses the **Hungarian Algorithm** (via SciPy) to find the **globally optimal table and column mappings** given all pairwise scores.
@@ -433,17 +444,108 @@ VITE_DEBUG=true
 | Undo/Redo History | ✅ | 50-action history buffer with stack-based tracking |
 | Keyboard Shortcuts | ✅ | Cmd+K for search, Escape to clear, Ctrl+Z/Y for undo/redo |
 
-### 🔧 Partial/Future Features
+### ✅ Schema Import Methods (Implemented - April 2026)
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Prisma Schema Parsing | ✅ | Parse `.prisma` files with full type mapping (Int, String, DateTime, etc.) |
+| JSON Schema Parsing | ✅ | Support standard JSON Schema format with flexible layouts (object, array, object-per-table) |
+| Live Database Connectors | ✅ | Connect directly to PostgreSQL, MySQL, MongoDB via REST API with introspection |
+| Database Validation | ✅ | Test connection before introspection, connection parameter validation |
+
+### ✅ Migration Preview Enhancements (Implemented - April 2026)
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Copy Section Buttons | ✅ | Per-table migration section copy with visual feedback |
+| Conflict Annotation UI | ✅ | Enhanced conflict markers with icons, colors, and hover tooltips |
+| Sidebar Navigation | ✅ | Scrollable section navigator with visual indicators for conflicts |
+| Live Syntax Highlighting | ✅ | SQL keyword coloring with token-based parsing |
+
+### ✅ Smart Suggestions Enhancement (Implemented - April 2026)
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Semantic Synonym Matching | ✅ | Domain-specific synonym dictionaries (14 categories) with Jaccard similarity |
+| Transformation Suggestions | ✅ | Type conversion recommendations for incompatible columns |
+| Enhanced Scoring | ✅ | 50% semantic weight for better cross-platform matching |
+
+### 🔧 Future Features
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Prisma Schema Parsing | 🔲 Stub | Parser interface exists, implementation pending |
-| JSON Schema Parsing | 🔲 Stub | Parser interface exists, implementation pending |
-| LLM Transformations | 🔲 Stub | Hook exists, not integrated |
-| Live DB Connectors | 🔲 Future | Connect directly to PostgreSQL, MySQL, etc. |
-| Copy Section Buttons | 🔲 Partial | Per-table section copy functionality |
 | Manual Mapping Editor | 🔲 Future | UI to adjust auto-generated mappings in detail |
 | Batch Processing | 🔲 Future | Reconcile multiple schema pairs at once |
+| LLM-Powered Transformations | 🔲 Research | AI-based transformation suggestions |
+| Schema Versioning | 🔲 Future | Track schema evolution across migrations |
+| Performance Optimization | 🔲 Future | GPU-accelerated fingerprinting for large schemas |
+
+---
+
+## Schema Import Methods
+
+SchemaSync supports multiple ways to import schemas, not just raw SQL:
+
+### 1. SQL DDL (SQL files or raw statements)
+Upload `.sql` files or paste CREATE TABLE statements directly.
+
+```sql
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 2. Prisma Schema
+Paste Prisma `.prisma` files with automatic type mapping:
+
+```prisma
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  posts Post[]
+}
+
+model Post {
+  id      Int     @id @default(autoincrement())
+  title   String
+  author  User    @relation(fields: [authorId], references: [id])
+  authorId Int
+}
+```
+
+SchemaSync maps Prisma types (Int, String, DateTime, etc.) to SQL equivalents and extracts relationships.
+
+### 3. JSON Schema
+Import standard JSON Schema definitions with flexible formats:
+
+```json
+{
+  "Users": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "integer" },
+      "email": { "type": "string", "format": "email" },
+      "created_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}
+```
+
+### 4. Live Database Connection
+Connect directly to PostgreSQL, MySQL, or MongoDB to introspect existing schemas:
+
+```
+Host: production-db.example.com
+Port: 5432
+Username: read_user
+Database: analytics
+SSL: Enabled
+```
+
+The frontend securely sends credentials to the backend for introspection without storing passwords. Connection details are validated before use.
 
 ---
 
@@ -603,6 +705,28 @@ Users are warned before exporting:
   • 1 low-confidence mapping (0.65 score)
   
 Recommendation: Always test migrations in staging first and maintain backups.
+```
+
+### Interactive Migration Preview
+
+The migration preview panel provides an interactive, visual way to review generated SQL before execution:
+
+**Features:**
+- **Live Syntax Highlighting** — SQL keywords (blue), strings (green), comments (gray)
+- **Line Numbers** — Easy reference for complex migrations
+- **Scrollable Sidebar Navigation** — Jump between table sections, see conflict indicators
+- **Copy Section Buttons** — Copy individual table migrations for targeted deployment
+- **Conflict Annotations** — Visual markers with icons, colors, and hover tooltips:
+  - 🔶 Amber for data conflicts (naming, constraint changes)
+  - 🔴 Rose for data loss risks (type narrowing, dropped columns)
+- **Section Overview** — Total line count, section count, table mappings at a glance
+
+```sql
+-- Preview shows per-table sections with headers:
+-- ─── users → wp_users (0.95) ───    ← Clickable section header
+CREATE TABLE wp_users ...              ← Syntax highlighted
+INSERT INTO wp_users SELECT ...        ← Can copy this section alone
+-- ⚠️ CONFLICT: Type difference ...    ← Conflict annotation with tooltip
 ```
 
 ---
