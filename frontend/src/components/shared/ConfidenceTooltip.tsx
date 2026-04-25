@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -16,12 +17,14 @@ export function ConfidenceTooltip({
   matchReason,
   showOnHover = false,
 }: Props) {
+  const [show, setShow] = useState(false)
+
   const content = (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="rounded-lg border border-white/[0.12] bg-[#0a0a12]/95 backdrop-blur-sm p-4 shadow-lg text-xs space-y-3 max-w-xs z-50"
+      className="rounded-lg border border-white/[0.12] bg-[#0a0a12]/95 backdrop-blur-sm p-4 shadow-2xl text-xs space-y-3 max-w-xs z-[9999]"
     >
       {/* Header */}
       <p className="font-semibold text-white/80">Confidence Breakdown</p>
@@ -62,13 +65,22 @@ export function ConfidenceTooltip({
 
   if (showOnHover) {
     return (
-      <div className="group relative inline-block">
+      <div
+        className="relative inline-block"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      >
         {/* Trigger */}
         <div className="cursor-help" />
-        {/* Tooltip */}
-        <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-          {content}
-        </div>
+
+        {/* Tooltip - positioned to avoid overlap */}
+        <AnimatePresence>
+          {show && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none z-[9999] whitespace-nowrap">
+              {content}
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     )
   }

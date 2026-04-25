@@ -784,12 +784,13 @@ function Row({
           >
             <ConfidenceBadge value={mapping.confidence} />
 
-            <div className="pointer-events-none absolute -right-2 -top-2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+            <div className="absolute -right-0 -top-12 z-50">
               <ConfidenceTooltip
                 structuralScore={mapping.structural_score}
                 semanticScore={mapping.semantic_score}
                 combinedScore={mapping.confidence}
                 matchReason={mapping.column_mappings?.[0]?.mapping_type}
+                showOnHover={true}
               />
             </div>
           </motion.div>
