@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import type { UploadState, AnalysisState, ReconciliationResult } from './types'
+import { useState, useEffect } from 'react'
+import type { UploadState, AnalysisState, ReconciliationResult, ReconcileStatusResponse } from './types'
+import { apiClient } from './lib/api'
 
 import UploadPanel from './components/Upload/UploadPanel'
+import ProgressTracker from './components/Progress/ProgressTracker'
 import EquivalenceGraph from './components/Graph/EquivalenceGraph'
 import MappingTable from './components/Mapping/MappingTable'
 import ConflictReport from './components/Conflicts/ConflictReport'
@@ -10,6 +12,12 @@ import MigrationScaffold from './components/CodeGen/MigrationScaffold'
 type Tab = 'mappings' | 'graph' | 'conflicts' | 'migration'
 
 const tabs: Tab[] = ['mappings', 'graph', 'conflicts', 'migration']
+
+interface PollingState {
+  progress: number
+  currentPhase: string
+  phaseDescription: string
+}
 
 export default function App() {
   const [uploadState, setUploadState] = useState<UploadState>({
@@ -22,12 +30,67 @@ export default function App() {
     result: undefined,
   })
 
-  const handleAnalysisComplete = (result: ReconciliationResult) => {
-    setAnalysisState((prev) => ({
-      ...prev,
-      result,
-      activeTab: 'mappings',
-    }))
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [pollingState, setPollingState] = useState<PollingState>({
+    progress: 0,
+    currentPhase: 'parsing',
+    phaseDescription: 'Parsing schemas...',
+  })
+  const [error, setError] = useState<string | null>(null)
+
+  // Polling effect
+  useEffect(() => {
+    if (!jobId) return
+
+    const interval = setInterval(async () => {
+      try {
+        const response: ReconcileStatusResponse = await apiClient.getReconciliationStatus(jobId)
+
+        setPollingState({
+          progress: response.progress,
+          currentPhase: response.current_phase,
+          phaseDescription: response.phase_description,
+        })
+
+        if (response.status === 'complete' && response.result) {
+          setAnalysisState((prev) => ({
+            ...prev,
+            result: response.result as ReconciliationResult,
+            activeTab: 'mappings',
+          }))
+          setJobId(null)
+          clearInterval(interval)
+        } else if (response.status === 'failed') {
+          setError('Reconciliation failed. Please try again.')
+          setJobId(null)
+          clearInterval(interval)
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+        setError('Lost connection to backend. Please try again.')
+        setJobId(null)
+        clearInterval(interval)
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [jobId])
+
+  const handleAnalysisStart = async (newSessionId: string) => {
+    setError(null)
+    setPollingState({
+      progress: 0,
+      currentPhase: 'parsing',
+      phaseDescription: 'Parsing schemas...',
+    })
+
+    try {
+      const response = await apiClient.startReconciliation(newSessionId)
+      setJobId(response.job_id)
+    } catch (err) {
+      setError('Failed to start reconciliation. Please try again.')
+      console.error(err)
+    }
   }
 
   const handleTabChange = (tab: Tab) => {
@@ -47,9 +110,18 @@ export default function App() {
     setUploadState({
       isLoading: false,
     })
+
+    setJobId(null)
+    setPollingState({
+      progress: 0,
+      currentPhase: 'parsing',
+      phaseDescription: 'Parsing schemas...',
+    })
+    setError(null)
   }
 
   const result = analysisState.result
+  const isPolling = jobId !== null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -63,7 +135,32 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {!result ? (
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+            <p className="text-sm text-red-800">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Progress Tracker - Show while polling */}
+        {isPolling && (
+          <div className="mb-8 rounded-lg bg-white p-8 shadow-sm">
+            <ProgressTracker
+              progress={pollingState.progress}
+              currentPhase={pollingState.currentPhase}
+              phaseDescription={pollingState.phaseDescription}
+            />
+          </div>
+        )}
+
+        {/* Upload Phase - Show when no result and not polling */}
+        {!result && !isPolling && (
           <div className="rounded-lg bg-white p-8 shadow-sm">
             <h2 className="mb-6 text-xl font-semibold text-slate-900">
               Upload Schemas
@@ -72,10 +169,13 @@ export default function App() {
             <UploadPanel
               state={uploadState}
               onStateChange={setUploadState}
-              onComplete={handleAnalysisComplete}
+              onAnalysisStart={handleAnalysisStart}
             />
           </div>
-        ) : (
+        )}
+
+        {/* Results Phase - Show when result available */}
+        {result && !isPolling && (
           <div className="grid gap-8">
             <div className="rounded-lg bg-white shadow-sm">
               <div className="flex border-b border-slate-200">
