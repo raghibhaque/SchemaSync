@@ -23,12 +23,22 @@ interface Props { result: ReconciliationResult }
     onEscape: () => setSearch(''),
   })
 
-  const filtered = useMemo(() =>
-    search.trim() === '' ? result.table_mappings : result.table_mappings.filter(m =>
-      m.table_a.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.table_b.name.toLowerCase().includes(search.toLowerCase())
-    ), [result.table_mappings, search]
-  )
+  const filtered = useMemo(() => {
+    if (search.trim() === '') return result.table_mappings;
+    const q = search.toLowerCase();
+    return result.table_mappings.filter(m => {
+      // Table name match
+      if (m.table_a.name.toLowerCase().includes(q) || m.table_b.name.toLowerCase().includes(q)) return true;
+      // Column name match (source or target)
+      for (const col of m.column_mappings) {
+        if (
+          col.col_a.name.toLowerCase().includes(q) ||
+          col.col_b.name.toLowerCase().includes(q)
+        ) return true;
+      }
+      return false;
+    });
+  }, [result.table_mappings, search]);
 
   const toggle = (i: number) => {
     const s = new Set(expanded)
