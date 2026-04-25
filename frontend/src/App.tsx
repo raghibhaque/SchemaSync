@@ -9,6 +9,7 @@ import ConflictReport from './components/Conflicts/ConflictReport'
 import MigrationScaffold from './components/CodeGen/MigrationScaffold'
 import AnalyticsView from './components/Analytics/AnalyticsView'
 import ToastContainer from './components/shared/ToastContainer'
+import ShortcutsModal from './components/shared/ShortcutsModal'
 
 type Tab = 'mappings' | 'analytics' | 'graph' | 'conflicts' | 'migration'
 
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#06060e] text-white/90">
       <ToastContainer />
+      <ShortcutsModal />
       <AnimatePresence mode="wait">
         {!result ? (
           <motion.div
