@@ -9,7 +9,10 @@ import { useTemplates } from '../../hooks/useTemplates'
 import { useHistory } from '../../hooks/useHistory'
 import { useFilterPresets } from '../../hooks/useFilterPresets'
 import { useCustomRules } from '../../hooks/useCustomRules'
+import { useProgressMetrics } from '../../hooks/useProgressMetrics'
+import { useConflictResolutions } from '../../hooks/useConflictResolutions'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
+import ProgressDashboard from './ProgressDashboard'
 import FilterPresetsUI from './FilterPresetsUI'
 import RulesUI from './RulesUI'
 import { ConfidenceTooltip } from '../shared/ConfidenceTooltip'
@@ -52,6 +55,17 @@ export default function MappingTable({ result }: Props) {
   const { history, addEntry: addHistoryEntry, clearHistory } = useHistory(schemaHash)
   const { allPresets, savePreset: savePresetToStorage, deletePreset: deletePresetFromStorage } = useFilterPresets()
   const { rules, saveRule, updateRule, deleteRule } = useCustomRules()
+
+  // Create a session key for conflict resolutions
+  const conflictSessionKey = useMemo(() => {
+    const { tables_in_a, tables_in_b, tables_matched } = result.summary
+    return `conflicts:${tables_in_a}_${tables_in_b}_${tables_matched}`
+  }, [result.summary])
+
+  const { getStats: getConflictStats } = useConflictResolutions(conflictSessionKey)
+  const conflictStats = getConflictStats()
+
+  const metrics = useProgressMetrics(result, reviewed, conflictStats.resolved)
 
   const handleSaveTemplate = (name: string) => {
     const reviewedIndices = Array.from(reviewed)
@@ -410,19 +424,23 @@ export default function MappingTable({ result }: Props) {
         )}
       </AnimatePresence>
 
+      {/* Progress Dashboard */}
+      <ProgressDashboard metrics={metrics} />
+
+      {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat label="Tables matched" value={`${tables_matched} / ${tables_in_a}`}  />
         <Stat
           label="Avg confidence"
           value={`${(average_confidence * 100).toFixed(0)}%`}
           accent
-          
+
         />
         <Stat
           label="Conflicts"
           value={String(total_conflicts)}
           warn={total_conflicts > 0}
-          
+
         />
       </div>
 
