@@ -4,10 +4,12 @@ import { useState, useMemo } from 'react'
 import type { TableMapping, ColumnMapping } from '../../types'
 import { useTheme } from '../../hooks/useTheme'
 import { useConflictResolutions } from '../../hooks/useConflictResolutions'
+import { useMappingNotes } from '../../hooks/useMappingNotes'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import UnmatchedColumnsPanel from './UnmatchedColumnsPanel'
 import DataPreviewDrawer from './DataPreviewDrawer'
 import ConflictResolutionPanel from './ConflictResolutionPanel'
+import MappingNotesPanel from './MappingNotesPanel'
 
 interface Props {
   mapping: TableMapping | null
@@ -20,13 +22,14 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
   const isDark = theme === 'dark'
   const [previewMapping, setPreviewMapping] = useState<ColumnMapping | null>(null)
 
-  // Create a session key for conflict resolutions
+  // Create a session key for conflict resolutions and notes
   const sessionKey = useMemo(() => {
     if (!mapping) return 'default'
-    return `conflicts:${mapping.table_a.name}:${mapping.table_b.name}`
+    return `${mapping.table_a.name}:${mapping.table_b.name}`
   }, [mapping])
 
   const { markResolved, markNeedsReview, clearResolution, getResolution } = useConflictResolutions(sessionKey)
+  const { addNote, updateNote, deleteNote, getNote } = useMappingNotes(sessionKey)
 
   if (!mapping) return null
 
@@ -92,6 +95,14 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
 
             {/* Content */}
             <div className="p-6 space-y-6">
+              {/* Mapping Notes */}
+              <MappingNotesPanel
+                note={getNote(`mapping:${mapping.table_a.name}:${mapping.table_b.name}`)}
+                onAddNote={(text) => addNote(`mapping:${mapping.table_a.name}:${mapping.table_b.name}`, text)}
+                onUpdateNote={(text) => updateNote(`mapping:${mapping.table_a.name}:${mapping.table_b.name}`, text)}
+                onDeleteNote={() => deleteNote(`mapping:${mapping.table_a.name}:${mapping.table_b.name}`)}
+              />
+
               {mapping.column_mappings.length === 0 ? (
                 <p className={`text-sm ${
                   isDark ? 'text-white/30' : 'text-slate-600'
