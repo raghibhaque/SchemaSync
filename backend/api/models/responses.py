@@ -23,6 +23,20 @@ class ExportResponse(BaseModel):
     filename: str
 
 
+class JobSubmitResponse(BaseModel):
+    job_id: str
+    status: str = "pending"
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    step: str
+    progress: float
+    result: Optional[Any] = None
+    error: Optional[str] = None
+
+
 class HealthResponse(BaseModel):
     status: str
     version: str

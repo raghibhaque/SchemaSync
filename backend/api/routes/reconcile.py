@@ -2,12 +2,13 @@
 Reconcile route — runs the full reconciliation pipeline.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from backend.api.models.requests import ReconcileRequest, DemoRequest
-from backend.api.models.responses import ReconcileResponse
+from backend.api.models.responses import ReconcileResponse, JobSubmitResponse, JobStatusResponse
 from backend.core.parsers.sql_ddl import SQLDDLParser
 from backend.core.reconciliation.engine import ReconciliationEngine
 from backend.config import DEMO_DIR, UPLOAD_DIR
+from backend.services.pipeline import create_job, get_job, run_reconciliation_job
 
 router = APIRouter(prefix="/reconcile", tags=["reconcile"])
 parser = SQLDDLParser()
@@ -158,3 +159,65 @@ async def reconcile_demo_stats(req: DemoRequest = DemoRequest()):
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Async job endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/async", response_model=JobSubmitResponse)
+async def reconcile_async(req: ReconcileRequest, background_tasks: BackgroundTasks):
+    if not parser.can_parse(req.source_sql):
+        raise HTTPException(400, "Source SQL has no CREATE TABLE statements")
+    if not parser.can_parse(req.target_sql):
+        raise HTTPException(400, "Target SQL has no CREATE TABLE statements")
+
+    source = parser.parse(req.source_sql, schema_name=req.source_name)
+    target = parser.parse(req.target_sql, schema_name=req.target_name)
+
+    job = create_job()
+    background_tasks.add_task(run_reconciliation_job, job.id, source, target)
+    return JobSubmitResponse(job_id=job.id)
+
+
+@router.post("/async/demo", response_model=JobSubmitResponse)
+async def reconcile_async_demo(req: DemoRequest = DemoRequest(), background_tasks: BackgroundTasks = BackgroundTasks()):
+    ghost_path = DEMO_DIR / "ghost_schema.sql"
+    wp_path = DEMO_DIR / "wordpress_schema.sql"
+    if not ghost_path.exists() or not wp_path.exists():
+        raise HTTPException(500, "Demo schema files not found")
+
+    source = parser.parse(ghost_path.read_text(), schema_name=req.source_name)
+    target = parser.parse(wp_path.read_text(), schema_name=req.target_name)
+
+    job = create_job()
+    background_tasks.add_task(run_reconciliation_job, job.id, source, target)
+    return JobSubmitResponse(job_id=job.id)
+
+
+@router.post("/async/files", response_model=JobSubmitResponse)
+async def reconcile_async_files(source_file: str, target_file: str, background_tasks: BackgroundTasks):
+    source_path = UPLOAD_DIR / source_file
+    target_path = UPLOAD_DIR / target_file
+    if not source_path.exists():
+        raise HTTPException(404, f"Source file not found: {source_file}")
+    if not target_path.exists():
+        raise HTTPException(404, f"Target file not found: {target_file}")
+
+    source_name = source_file.replace(".sql", "").replace("_schema", "")
+    target_name = target_file.replace(".sql", "").replace("_schema", "")
+
+    source = parser.parse(source_path.read_text(), schema_name=source_name)
+    target = parser.parse(target_path.read_text(), schema_name=target_name)
+
+    job = create_job()
+    background_tasks.add_task(run_reconciliation_job, job.id, source, target)
+    return JobSubmitResponse(job_id=job.id)
+
+
+@router.get("/jobs/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(job_id: str):
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(404, f"Job not found: {job_id}")
+    return JobStatusResponse(**job.to_dict())

@@ -27,15 +27,21 @@ class ReconciliationEngine:
         self.table_threshold = table_threshold
         self.column_threshold = column_threshold
 
-    def reconcile(self, source: Schema, target: Schema) -> ReconciliationResult:
+    def reconcile(self, source: Schema, target: Schema, on_progress=None) -> ReconciliationResult:
+        def _progress(p: float, step: str):
+            if on_progress:
+                on_progress(p, step)
+
         start_time = time.time()
         result = ReconciliationResult(
             source_schema=source.name,
             target_schema=target.name,
         )
 
+        _progress(0.05, "scoring tables")
         table_scores = build_table_score_matrix(source.tables, target.tables)
 
+        _progress(0.25, "assigning tables")
         table_assignments = hungarian_assignment(
             table_scores, threshold=self.table_threshold
         )
@@ -43,7 +49,9 @@ class ReconciliationEngine:
         matched_source_indices = set()
         matched_target_indices = set()
 
-        for src_idx, tgt_idx, scores in table_assignments:
+        n_tables = max(len(table_assignments), 1)
+        for i, (src_idx, tgt_idx, scores) in enumerate(table_assignments):
+            _progress(0.30 + 0.40 * (i / n_tables), f"mapping columns ({i + 1}/{n_tables})")
             src_table = source.tables[src_idx]
             tgt_table = target.tables[tgt_idx]
             matched_source_indices.add(src_idx)
@@ -113,8 +121,10 @@ class ReconciliationEngine:
             if i not in matched_target_indices
         ]
 
+        _progress(0.75, "detecting conflicts")
         result.conflicts = detect_conflicts(result, source, target)
 
+        _progress(0.90, "generating migration SQL")
         result.migration_sql = generate_migration_sql(result, source, target)
         
         elapsed = time.time() - start_time
