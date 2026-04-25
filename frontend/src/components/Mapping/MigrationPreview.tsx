@@ -91,9 +91,9 @@ function tokenizeLine(line: string): Array<{ type: string; text: string }> {
 }
 
 export default function MigrationPreview({ sql }: Props) {
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]))
   const [copiedSectionIdx, setCopiedSectionIdx] = useState<number | null>(null)
   const [hoveredConflictLine, setHoveredConflictLine] = useState<number | null>(null)
+  const [selectedSectionIdx, setSelectedSectionIdx] = useState<number>(0)
 
   const lines = useMemo(() => sql.split('\n'), [sql])
 
@@ -130,16 +130,6 @@ export default function MigrationPreview({ sql }: Props) {
     return results
   }, [lines])
 
-  const toggleSection = (idx: number) => {
-    const next = new Set(expandedSections)
-    if (next.has(idx)) {
-      next.delete(idx)
-    } else {
-      next.add(idx)
-    }
-    setExpandedSections(next)
-  }
-
   const copySectionSQL = async (idx: number, section: CodeSection) => {
     const sectionLines = lines.slice(section.start, section.end + 1)
     const sectionSQL = sectionLines.join('\n')
@@ -161,49 +151,65 @@ export default function MigrationPreview({ sql }: Props) {
       <div className="flex items-center gap-2 mb-3">
         <h4 className="text-sm font-medium text-white/80">Migration Preview</h4>
         <span className="text-xs text-white/40">{lines.length} lines</span>
+        {sections.length > 0 && (
+          <span className="text-xs text-white/40">•</span>
+        )}
+        {sections.length > 0 && (
+          <span className="text-xs text-white/40">{sections.length} sections</span>
+        )}
       </div>
 
-      {sections.length > 0 && (
-        <div className="mb-3 space-y-2">
-          <p className="text-xs text-white/50">Sections:</p>
-          <div className="flex flex-wrap gap-2">
-            {sections.map((section, idx) => (
-              <div key={idx} className="flex items-center gap-1">
-                <button
-                  onClick={() => toggleSection(idx)}
-                  className={`text-xs px-2 py-1 rounded transition-colors ${
-                    expandedSections.has(idx)
-                      ? 'bg-indigo-500/30 text-indigo-300'
-                      : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
-                  } ${section.hasConflicts ? 'border border-amber-500/30' : ''}`}
-                >
-                  {section.title}
-                </button>
-                <button
-                  onClick={() => copySectionSQL(idx, section)}
-                  className="text-xs px-1.5 py-1 rounded bg-white/[0.05] text-white/40 hover:bg-white/[0.1] hover:text-white/60 transition-colors flex items-center gap-1"
-                  title="Copy this section"
-                >
-                  {copiedSectionIdx === idx ? (
-                    <>
-                      <Check size={12} />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={12} />
-                      <span>Copy</span>
-                    </>
+      <div className="flex gap-3 rounded-lg border border-white/[0.08] bg-[#0a0a12]/50 overflow-hidden" style={{ maxHeight: '500px' }}>
+        {/* Navigation Sidebar */}
+        {sections.length > 0 && (
+          <div className="w-48 border-r border-white/[0.08] bg-[#0a0a12]/80 overflow-y-auto flex-shrink-0">
+            <div className="p-3 space-y-1">
+              <p className="text-xs text-white/40 mb-2 px-1">Sections</p>
+              {sections.map((section, idx) => (
+                <div key={idx} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setSelectedSectionIdx(idx)
+                    }}
+                    className={`w-full text-left text-xs px-2 py-1.5 rounded transition-colors flex items-center justify-between gap-2 ${
+                      selectedSectionIdx === idx
+                        ? 'bg-indigo-500/30 text-indigo-300'
+                        : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <span className="truncate">{section.title}</span>
+                    {section.hasConflicts && (
+                      <span className="text-amber-400 flex-shrink-0">⚠</span>
+                    )}
+                  </button>
+                  {selectedSectionIdx === idx && (
+                    <button
+                      onClick={() => copySectionSQL(idx, section)}
+                      className="w-full text-xs px-2 py-1 rounded bg-white/[0.05] text-white/40 hover:bg-white/[0.1] hover:text-white/60 transition-colors flex items-center justify-center gap-1"
+                      title="Copy this section"
+                    >
+                      {copiedSectionIdx === idx ? (
+                        <>
+                          <Check size={12} />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="relative rounded-lg border border-white/[0.08] bg-[#0a0a12]/50 overflow-hidden">
-        <pre className="text-xs font-mono leading-relaxed overflow-x-auto max-h-96 p-4 text-white/70">
+        {/* Code Preview */}
+        <div className="flex-1 relative rounded-r-lg overflow-hidden">
+        <pre className="text-xs font-mono leading-relaxed overflow-x-auto w-full p-4 text-white/70">
           {previewLines.map((line, idx) => {
             const hasConflict = line.includes('⚠')
             const hasRisk = line.includes('RISK')
@@ -274,6 +280,7 @@ export default function MigrationPreview({ sql }: Props) {
             </span>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
