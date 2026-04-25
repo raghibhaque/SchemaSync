@@ -231,12 +231,6 @@ function FilePicker({
 }) {
   const [isDragging, setIsDragging] = useState(false)
 
-  const colors = {
-    indigo: { active: 'border-indigo-500/40 bg-indigo-500/[0.07] text-indigo-300', icon: 'text-indigo-400' },
-    violet: { active: 'border-violet-500/40 bg-violet-500/[0.07] text-violet-300', icon: 'text-violet-400' },
-  }
-  const c = colors[accent]
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(true)
@@ -269,41 +263,65 @@ function FilePicker({
     }
   }
 
+  const getClasses = () => {
+    const base = 'relative flex flex-col items-center gap-2.5 rounded-xl border px-3 py-5 text-center transition-all overflow-hidden group'
+    if (isDragging) {
+      return cn(base, 'border-white/[0.4] bg-gradient-to-br from-white/[0.12] to-white/[0.05] ring-2 ring-white/[0.15] shadow-[0_8px_32px_rgba(255,255,255,0.1)]')
+    }
+    if (file) {
+      return cn(
+        base,
+        accent === 'indigo'
+          ? 'border-indigo-500/40 bg-gradient-to-br from-indigo-500/12 to-indigo-600/5 text-indigo-300'
+          : 'border-violet-500/40 bg-gradient-to-br from-violet-500/12 to-violet-600/5 text-violet-300'
+      )
+    }
+    return cn(base, 'border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] text-white/40 hover:border-white/[0.15] hover:bg-gradient-to-br hover:from-white/[0.08] hover:to-white/[0.03] hover:text-white/60 hover:shadow-[0_8px_24px_rgba(255,255,255,0.08)]')
+  }
+
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       disabled={disabled}
-      className={cn(
-        'flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all',
-        isDragging
-          ? 'border-white/[0.3] bg-white/[0.08] ring-2 ring-white/[0.1]'
-          : file ? c.active : 'border-white/[0.07] bg-white/[0.03] text-white/30 hover:border-white/[0.12] hover:bg-white/[0.05]',
-        disabled && 'cursor-not-allowed opacity-50'
-      )}
+      whileHover={!disabled ? { scale: 1.02, y: -2 } : {}}
+      whileTap={!disabled ? { scale: 0.98 } : {}}
+      className={cn(getClasses(), disabled && 'cursor-not-allowed opacity-40')}
     >
       <motion.div
-        animate={{ scale: isDragging ? 1.1 : 1 }}
+        animate={{ scale: isDragging ? 1.2 : 1, y: isDragging ? -2 : 0 }}
         transition={{ duration: 0.2 }}
       >
         {isDragging ? (
-          <Upload className="h-5 w-5 text-white/40" />
+          <motion.div
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 0.6, repeat: Infinity }}
+          >
+            <Upload className="h-6 w-6 text-white/50" />
+          </motion.div>
         ) : (
-          <FileText className={cn('h-5 w-5', file ? c.icon : 'text-white/20')} />
+          <FileText className={cn(
+            'h-6 w-6 transition-colors',
+            file
+              ? accent === 'indigo'
+                ? 'text-indigo-400'
+                : 'text-violet-400'
+              : 'text-white/25 group-hover:text-white/40'
+          )} />
         )}
       </motion.div>
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-wider opacity-60">
-          {isDragging ? 'Drop file here' : label}
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+          {isDragging ? '📥 Drop here' : file ? '✓ Ready' : label}
         </p>
-        <p className="mt-0.5 max-w-full truncate text-xs font-medium">
+        <p className="mt-1 max-w-full truncate text-xs font-medium text-white/60">
           {file ? file.name : '.sql file'}
         </p>
       </div>
-    </button>
+    </motion.button>
   )
 }
 
