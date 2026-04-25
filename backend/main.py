@@ -20,7 +20,7 @@ from backend.api.errors import (
     HTTP_STATUS_TO_ERROR_CODE,
     ValidationErrorDetail,
 )
-from backend.config import CORS_ORIGINS, DEBUG, API_V1_PREFIX
+from backend.config import CORS_ORIGINS, DEBUG, API_V1_PREFIX, MAX_REQUEST_BYTES
 from backend.logging_config import configure_logging
 
 configure_logging(debug=DEBUG)
@@ -36,6 +36,20 @@ app = FastAPI(
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests whose Content-Length exceeds MAX_REQUEST_BYTES before reading the body."""
+
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_REQUEST_BYTES:
+            body = ErrorResponse(
+                error=ErrorCode.FILE_TOO_LARGE.value,
+                message=f"Request body too large (max {MAX_REQUEST_BYTES // (1024 * 1024)} MB)",
+            ).model_dump(mode="json")
+            return JSONResponse(status_code=413, content=body)
+        return await call_next(request)
+
+
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Attach a per-request UUID to request.state and echo it in the response header."""
 
@@ -47,6 +61,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
+app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
