@@ -128,52 +128,88 @@ function QualityMeter({ percentage }: { percentage: number }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-6"
+      className="relative overflow-hidden rounded-xl border border-white/[0.1] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
     >
-      <div className="flex items-center gap-6">
-        {/* Circular Progress */}
-        <div className="relative h-24 w-24 shrink-0">
+      <div className="flex items-center gap-8">
+        {/* Circular Progress with glow */}
+        <div className="relative h-28 w-28 shrink-0">
+          {/* Glow effect */}
+          <motion.div
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="absolute inset-0 rounded-full"
+            style={{
+              boxShadow: percentage >= 90 ? '0 0 24px rgba(16,185,129,0.4)' :
+                        percentage >= 80 ? '0 0 24px rgba(34,211,238,0.4)' :
+                        percentage >= 60 ? '0 0 24px rgba(217,119,6,0.4)' :
+                        percentage >= 40 ? '0 0 24px rgba(249,115,22,0.4)' :
+                        '0 0 24px rgba(244,63,94,0.4)',
+            }}
+          />
           <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
             {/* Background circle */}
-            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
             {/* Progress circle */}
             <motion.circle
               cx="50"
               cy="50"
               r="45"
               fill="none"
-              strokeWidth="8"
+              strokeWidth="6"
               strokeDasharray={`${2 * Math.PI * 45}`}
               initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
               animate={{ strokeDashoffset: 2 * Math.PI * 45 * (1 - percentage / 100) }}
-              transition={{ duration: 1.2, ease: 'easeOut' }}
-              className={`stroke-current`}
+              transition={{ duration: 1.5, ease: 'easeOut' }}
+              className={`stroke-current drop-shadow-lg`}
               style={{
-                stroke: `url(#grad-${percentage})`,
+                stroke: percentage >= 90 ? '#10b981' :
+                       percentage >= 80 ? '#06b6d4' :
+                       percentage >= 60 ? '#d97706' :
+                       percentage >= 40 ? '#f97316' :
+                       '#f43f5e',
               }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-white/80">{percentage}%</span>
+            <motion.span
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className="text-3xl font-bold bg-gradient-to-br from-white/90 to-white/60 bg-clip-text text-transparent"
+            >
+              {percentage}%
+            </motion.span>
           </div>
         </div>
 
         {/* Info */}
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-white/80">{getLabel(percentage)}</h3>
-          <p className="mt-1 text-sm text-white/40">
+          <motion.h3
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-xl font-bold text-white/90"
+          >
+            {getLabel(percentage)}
+          </motion.h3>
+          <motion.p
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mt-2 text-sm text-white/50 leading-relaxed"
+          >
             {percentage >= 80
-              ? 'Your schemas match very well. Proceed with confidence.'
+              ? '✓ Your schemas match very well. Proceed with confidence.'
               : percentage >= 60
-                ? 'Good match overall. Review flagged items before migration.'
-                : 'Manual intervention recommended before proceeding.'}
-          </p>
-          <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                ? '⚠ Good match overall. Review flagged items before migration.'
+                : '⚠ Manual intervention recommended before proceeding.'}
+          </motion.p>
+          <div className="mt-4 h-2 rounded-full bg-white/[0.08] overflow-hidden">
             <motion.div
-              className={`h-full bg-gradient-to-r ${getColor(percentage)}`}
+              className={`h-full bg-gradient-to-r ${getColor(percentage)} shadow-[0_0_12px_currentColor]`}
               initial={{ width: 0 }}
               animate={{ width: `${percentage}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
+              transition={{ duration: 1.2, ease: 'easeOut' }}
             />
           </div>
         </div>
@@ -192,21 +228,66 @@ function StatCard({
   color: string
 }) {
   const colors = {
-    emerald: 'border-emerald-500/20 bg-emerald-500/[0.06]',
-    amber:   'border-amber-500/20 bg-amber-500/[0.06]',
-    indigo:  'border-indigo-500/20 bg-indigo-500/[0.06]',
+    emerald: {
+      border: 'border-emerald-500/30',
+      bg: 'bg-gradient-to-br from-emerald-500/12 to-emerald-600/4',
+      text: 'text-emerald-300',
+      icon: 'text-emerald-400/70',
+      glow: 'shadow-[0_8px_24px_rgba(16,185,129,0.15)]',
+    },
+    amber: {
+      border: 'border-amber-500/30',
+      bg: 'bg-gradient-to-br from-amber-500/12 to-amber-600/4',
+      text: 'text-amber-300',
+      icon: 'text-amber-400/70',
+      glow: 'shadow-[0_8px_24px_rgba(217,119,6,0.15)]',
+    },
+    indigo: {
+      border: 'border-indigo-500/30',
+      bg: 'bg-gradient-to-br from-indigo-500/12 to-indigo-600/4',
+      text: 'text-indigo-300',
+      icon: 'text-indigo-400/70',
+      glow: 'shadow-[0_8px_24px_rgba(99,102,241,0.15)]',
+    },
   }
+
+  const c = colors[color as keyof typeof colors] ?? colors.indigo
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn('rounded-lg border p-3.5', colors[color as keyof typeof colors] ?? colors.indigo)}
+      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+      className={cn('relative overflow-hidden rounded-lg border p-4 backdrop-blur-sm transition-all', c.border, c.bg, c.glow)}
     >
-      <div className="mb-2 text-white/50">{icon}</div>
-      <p className="text-[11px] font-medium uppercase tracking-wider text-white/40">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-white/80">{value}</p>
-      <p className="mt-1 text-xs text-white/30">{detail}</p>
+      {/* Corner accent */}
+      <div className="absolute top-0 right-0 -mr-8 -mt-8 h-16 w-16 rounded-full opacity-20 blur-xl" style={{
+        background: color === 'emerald' ? 'radial-gradient(circle, #10b981, transparent)' :
+                   color === 'amber' ? 'radial-gradient(circle, #d97706, transparent)' :
+                   'radial-gradient(circle, #6366f1, transparent)',
+      }} />
+
+      <div className="relative z-10">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.05 }}
+          className={cn('mb-2.5', c.icon)}
+        >
+          {icon}
+        </motion.div>
+        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
+        <motion.p
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className={cn('mt-2 text-2xl font-bold', c.text)}
+        >
+          {value}
+        </motion.p>
+        <p className="mt-1.5 text-xs text-white/50 font-medium">{detail}</p>
+      </div>
     </motion.div>
   )
 }
