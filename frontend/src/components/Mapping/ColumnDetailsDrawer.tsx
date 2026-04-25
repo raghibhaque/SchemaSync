@@ -7,6 +7,7 @@ import { useConflictResolutions } from '../../hooks/useConflictResolutions'
 import { useMappingNotes } from '../../hooks/useMappingNotes'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import UnmatchedColumnsPanel from './UnmatchedColumnsPanel'
+import SmartSuggestionsPanel from './SmartSuggestionsPanel'
 import DataPreviewDrawer from './DataPreviewDrawer'
 import ConflictResolutionPanel from './ConflictResolutionPanel'
 import MappingNotesPanel from './MappingNotesPanel'
@@ -230,6 +231,11 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
                   ))}
                 </div>
               )}
+
+              <SmartSuggestionsPanel
+                mapping={mapping}
+                onAcceptSuggestion={onSuggestionAccept ?? (() => {})}
+              />
 
               <UnmatchedColumnsPanel
                 mapping={mapping}
