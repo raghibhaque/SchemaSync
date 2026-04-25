@@ -8,8 +8,10 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useTemplates } from '../../hooks/useTemplates'
 import { useHistory } from '../../hooks/useHistory'
 import { useFilterPresets } from '../../hooks/useFilterPresets'
+import { useCustomRules } from '../../hooks/useCustomRules'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import FilterPresetsUI from './FilterPresetsUI'
+import RulesUI from './RulesUI'
 import { ConfidenceTooltip } from '../shared/ConfidenceTooltip'
 import ColumnDetailsDrawer from './ColumnDetailsDrawer'
 import ConfidenceFilterSlider from './ConfidenceFilterSlider'
@@ -34,6 +36,7 @@ export default function MappingTable({ result }: Props) {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,6 +51,7 @@ export default function MappingTable({ result }: Props) {
   const { templates, saveTemplate: saveTemplateToStorage, deleteTemplate: deleteTemplateFromStorage } = useTemplates(schemaHash)
   const { history, addEntry: addHistoryEntry, clearHistory } = useHistory(schemaHash)
   const { allPresets, savePreset: savePresetToStorage, deletePreset: deletePresetFromStorage } = useFilterPresets()
+  const { rules, saveRule, updateRule, deleteRule } = useCustomRules()
 
   const handleSaveTemplate = (name: string) => {
     const reviewedIndices = Array.from(reviewed)
@@ -357,6 +361,18 @@ export default function MappingTable({ result }: Props) {
               📥 Export
             </span>
           </motion.button>
+          <motion.button
+            type="button"
+            onClick={() => setShowRules(!showRules)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="group relative overflow-hidden rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-xs font-medium text-white/60 transition-all hover:border-white/[0.15] hover:bg-white/[0.08] hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            aria-label={showRules ? 'Hide rules panel' : 'Show rules panel'}
+          >
+            <span className="relative flex items-center gap-1.5">
+              ⚙️ Rules {rules.length > 0 && `(${rules.length})`}
+            </span>
+          </motion.button>
         </div>
       </div>
 
@@ -375,6 +391,24 @@ export default function MappingTable({ result }: Props) {
         result={showExport ? result : null}
         onClose={() => setShowExport(false)}
       />
+
+      <AnimatePresence>
+        {showRules && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4"
+          >
+            <RulesUI
+              rules={rules}
+              onAddRule={saveRule}
+              onUpdateRule={updateRule}
+              onDeleteRule={deleteRule}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat label="Tables matched" value={`${tables_matched} / ${tables_in_a}`}  />
