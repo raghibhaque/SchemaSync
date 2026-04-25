@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { History, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import { History, Trash2, CheckCircle2, Circle, Undo2, Redo2 } from 'lucide-react'
 import type { HistoryEntry } from '../../hooks/useHistory'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -23,6 +23,10 @@ export default function HistoryPanel({ history, onClearHistory, isDark = true }:
         return <CheckCircle2 className="h-4 w-4 text-indigo-400" />
       case 'template_loaded':
         return <History className="h-4 w-4 text-cyan-400" />
+      case 'undo':
+        return <Undo2 className="h-4 w-4 text-violet-400" />
+      case 'redo':
+        return <Redo2 className="h-4 w-4 text-violet-400" />
       default:
         return <Circle className="h-4 w-4 text-white/40" />
     }
@@ -42,6 +46,10 @@ export default function HistoryPanel({ history, onClearHistory, isDark = true }:
         return 'Expanded mapping'
       case 'collapsed':
         return 'Collapsed mapping'
+      case 'undo':
+        return 'Undid action'
+      case 'redo':
+        return 'Redid action'
       default:
         return actionType
     }
