@@ -14,9 +14,6 @@ export default function ReconciliationStats({ result }: Props) {
   const totalTables = summary.tables_in_a + summary.tables_in_b
   const totalColumns = table_mappings.reduce((sum, m) => sum + m.column_mappings.length, 0)
   const matchedPercent = ((summary.tables_matched / summary.tables_in_a) * 100).toFixed(1)
-  const columnMatchPercent = summary.tables_in_a > 0
-    ? ((totalColumns / (summary.tables_in_a * 5)) * 100).toFixed(1) // Estimate: ~5 cols per table
-    : '0'
 
   const stats = [
     {

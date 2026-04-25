@@ -10,8 +10,8 @@ import ColumnDetailsDrawer from './ColumnDetailsDrawer'
 
 interface Props { result: ReconciliationResult }
 
-
-// --- Mapping review state ---
+export default function MappingTable({ result }: Props) {
+  // --- Mapping review state ---
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [search, setSearch] = useState('')
   const [selectedMapping, setSelectedMapping] = useState<TableMapping | null>(null)
