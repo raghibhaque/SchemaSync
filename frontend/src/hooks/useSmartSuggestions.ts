@@ -6,6 +6,26 @@ export interface ColumnSuggestion {
   targetCol: string
   score: number
   reasons: string[]
+  transformationRule?: string
+}
+
+// Semantic synonyms for common database field patterns
+const SEMANTIC_SYNONYMS: Record<string, string[]> = {
+  'id': ['identifier', 'uid', 'guid', 'pk', 'key', 'oid', 'no', 'nbr', 'nr'],
+  'user': ['account', 'member', 'author', 'owner', 'creator', 'person', 'profile', 'usr', 'cust', 'custmr', 'clnt', 'acct'],
+  'name': ['title', 'label', 'display_name', 'full_name', 'username', 'nm', 'nme', 'lbl'],
+  'slug': ['handle', 'alias'],
+  'email': ['mail', 'email_address'],
+  'content': ['body', 'text', 'html', 'markdown', 'description', 'excerpt', 'summary', 'abstract', 'desc', 'cmt', 'txt'],
+  'created': ['created_at', 'createdat', 'created_on', 'date_created', 'creation_date', 'date_added', 'insert_date', 'cre', 'crt', 'ins', 'ts'],
+  'updated': ['updated_at', 'updatedat', 'updated_on', 'modified', 'date_modified', 'last_modified', 'modification_date', 'edited_at', 'changed_at', 'upd', 'mod'],
+  'deleted': ['deleted_at', 'deletedat', 'removed_at'],
+  'status': ['state', 'active', 'enabled', 'visibility', 'stat', 'sts', 'actv', 'flg'],
+  'type': ['kind', 'category', 'class', 'group', 'cat', 'ctgr'],
+  'url': ['uri', 'link', 'href', 'path', 'permalink'],
+  'image': ['photo', 'avatar', 'picture', 'thumbnail', 'icon', 'cover', 'logo', 'feature_image', 'img', 'pic', 'pict'],
+  'count': ['total', 'num', 'number', 'qty', 'qnt', 'cnt', 'tot'],
+  'order': ['sort', 'position', 'rank', 'priority', 'sort_order', 'menu_order', 'srt', 'seq'],
 }
 
 function levenshteinDistance(a: string, b: string): number {
@@ -93,6 +113,39 @@ function calculateTypeSimilarity(typeA: string | undefined, typeB: string | unde
   return catA === catB ? 0.7 : 0.2
 }
 
+function tokenizeFieldName(name: string): string[] {
+  const cleaned = name.toLowerCase().replace(/[_\-\.]/g, ' ')
+  return cleaned.split(/\s+/).filter(t => t.length > 0)
+}
+
+function getSemanticTokens(fieldName: string): Set<string> {
+  const tokens = tokenizeFieldName(fieldName)
+  const synonyms = new Set(tokens)
+
+  for (const token of tokens) {
+    for (const [key, aliases] of Object.entries(SEMANTIC_SYNONYMS)) {
+      if (token === key || aliases.includes(token)) {
+        synonyms.add(key)
+        aliases.forEach(a => synonyms.add(a))
+      }
+    }
+  }
+
+  return synonyms
+}
+
+function calculateSemanticSimilarity(nameA: string, nameB: string): number {
+  const tokensA = getSemanticTokens(nameA)
+  const tokensB = getSemanticTokens(nameB)
+
+  if (tokensA.size === 0 || tokensB.size === 0) return 0
+
+  const intersection = new Set([...tokensA].filter(t => tokensB.has(t)))
+  const union = new Set([...tokensA, ...tokensB])
+
+  return intersection.size / union.size
+}
+
 export function useSmartSuggestions(mapping: TableMapping): ColumnSuggestion[] {
   return useMemo(() => {
     const suggestions: ColumnSuggestion[] = []
@@ -111,16 +164,20 @@ export function useSmartSuggestions(mapping: TableMapping): ColumnSuggestion[] {
         const reasons: string[] = []
 
         const nameSimilarity = calculateNameSimilarity(sourceCol.name, targetCol.name)
-        score += nameSimilarity * 0.4
+        score += nameSimilarity * 0.3
 
         const { core: sourceCore } = extractPrefixSuffix(sourceCol.name)
         const { core: targetCore } = extractPrefixSuffix(targetCol.name)
         const coreSimilarity = calculateNameSimilarity(sourceCore, targetCore)
-        score += coreSimilarity * 0.3
+        score += coreSimilarity * 0.2
         if (coreSimilarity > 0.8) reasons.push('Similar core names')
 
+        const semanticSimilarity = calculateSemanticSimilarity(sourceCol.name, targetCol.name)
+        score += semanticSimilarity * 0.5
+        if (semanticSimilarity > 0.7) reasons.push('Semantic match')
+
         const typeSimilarity = calculateTypeSimilarity(sourceCol.data_type?.base_type, targetCol.data_type?.base_type)
-        score += typeSimilarity * 0.3
+        score += typeSimilarity * 0.2
         if (typeSimilarity > 0.8) reasons.push('Compatible types')
 
         if (score > 0) {
@@ -139,17 +196,29 @@ export function useSmartSuggestions(mapping: TableMapping): ColumnSuggestion[] {
           const { core: sourceCore } = extractPrefixSuffix(sourceCol.name)
           const { core: targetCore } = extractPrefixSuffix(topMatch.targetCol.name)
           const coreSimilarity = calculateNameSimilarity(sourceCore, targetCore)
+          const semanticSimilarity = calculateSemanticSimilarity(sourceCol.name, topMatch.targetCol.name)
 
           if (nameSimilarity > 0.7) reasons.push('Name match')
+          if (semanticSimilarity > 0.7) reasons.push('Semantic match')
           if (coreSimilarity > 0.8) reasons.push('Core name match')
           if (typeSimilarity > 0.8) reasons.push('Type match')
           if (reasons.length === 0 && topMatch.score > 0.5) reasons.push('Pattern match')
+
+          let transformationRule: string | undefined
+          if (sourceCol.data_type?.base_type && topMatch.targetCol.data_type?.base_type) {
+            const srcType = sourceCol.data_type.base_type.toLowerCase()
+            const tgtType = topMatch.targetCol.data_type.base_type.toLowerCase()
+            if (srcType !== tgtType && typeSimilarity < 0.7) {
+              transformationRule = `Cast ${srcType} → ${tgtType}`
+            }
+          }
 
           suggestions.push({
             sourceCol: sourceCol.name,
             targetCol: topMatch.targetCol.name,
             score: topMatch.score,
             reasons,
+            transformationRule,
           })
         }
       }

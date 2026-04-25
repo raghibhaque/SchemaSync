@@ -65,13 +65,18 @@ export default function SmartSuggestionsPanel({ mapping, onAcceptSuggestion }: P
               </div>
             </div>
 
-            {suggestion.reasons.length > 0 && (
+            {(suggestion.reasons.length > 0 || suggestion.transformationRule) && (
               <div className="flex flex-wrap gap-1 mb-2">
                 {suggestion.reasons.map((reason, j) => (
                   <span key={j} className="text-[10px] bg-white/[0.08] text-white/60 rounded px-1.5 py-0.5">
                     {reason}
                   </span>
                 ))}
+                {suggestion.transformationRule && (
+                  <span className="text-[10px] bg-orange-500/20 text-orange-300 rounded px-1.5 py-0.5">
+                    {suggestion.transformationRule}
+                  </span>
+                )}
               </div>
             )}
 
