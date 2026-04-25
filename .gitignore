@@ -77,3 +77,4 @@ pip-delete-this-directory.txt
 uploads/
 temp/
 tmp/
+.sh/
