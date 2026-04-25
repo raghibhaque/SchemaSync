@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react'
 import type { ReconciliationResult } from '../../types'
@@ -21,6 +22,8 @@ const SEVERITY_META = {
 type Severity = keyof typeof SEVERITY_META
 
 export default function ConflictReport({ result }: Props) {
+  const [selectedSeverities, setSelectedSeverities] = useState<Set<Severity>>(new Set(['error', 'warning', 'info']))
+
   const allConflicts: ConflictItem[] = result.table_mappings.flatMap(table =>
     table.column_mappings.flatMap(col =>
       col.conflicts.map((c: unknown) => {
@@ -35,16 +38,52 @@ export default function ConflictReport({ result }: Props) {
     )
   )
 
+  const toggleSeverity = (severity: Severity) => {
+    const newSet = new Set(selectedSeverities)
+    if (newSet.has(severity)) {
+      newSet.delete(severity)
+    } else {
+      newSet.add(severity)
+    }
+    setSelectedSeverities(newSet)
+  }
+
   const groups = (['error', 'warning', 'info'] as Severity[]).map(sev => ({
     sev,
     items: allConflicts.filter(c => c.severity === sev),
-  })).filter(g => g.items.length > 0)
+  })).filter(g => g.items.length > 0 && selectedSeverities.has(g.sev))
 
   const total = result.summary.total_conflicts
   const critical = result.summary.critical_conflicts
 
   return (
     <div className="space-y-6">
+
+      {/* Severity filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-white/40">Filter by:</span>
+        {(['error', 'warning', 'info'] as Severity[]).map(severity => {
+          const meta = SEVERITY_META[severity]
+          const isSelected = selectedSeverities.has(severity)
+          return (
+            <motion.button
+              key={severity}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => toggleSeverity(severity)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+                isSelected
+                  ? `${meta.border} ${meta.bg} ${meta.text}`
+                  : 'border border-white/[0.06] bg-white/[0.02] text-white/30 hover:border-white/[0.12] hover:bg-white/[0.05]'
+              )}
+            >
+              <div className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
+              {meta.label}
+            </motion.button>
+          )
+        })}
+      </div>
 
       {/* Summary chips */}
       <div className="flex flex-wrap gap-3">
