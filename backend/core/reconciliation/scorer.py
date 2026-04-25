@@ -41,14 +41,20 @@ def score_table_pair(table_a: Table, table_b: Table) -> dict:
 
     reasons = []
     if semantic >= 0.9:
-        reasons.append(f"names match: '{table_a.name}' ↔ '{table_b.name}'")
+        reasons.append(f"Strong name match: '{table_a.name}' ↔ '{table_b.name}' (semantic: {semantic:.0%})")
     elif semantic >= 0.6:
-        reasons.append(f"names similar: '{table_a.name}' ↔ '{table_b.name}'")
+        reasons.append(f"Partial name match: '{table_a.name}' ↔ '{table_b.name}' (semantic: {semantic:.0%})")
     if structural >= 0.7:
-        reasons.append(f"similar structure ({fp_a.column_count} vs {fp_b.column_count} cols)")
+        reasons.append(f"Similar structure: {fp_a.column_count} vs {fp_b.column_count} columns, type overlap high")
+    elif structural >= 0.4:
+        reasons.append(f"Moderate structural similarity: {fp_a.column_count} vs {fp_b.column_count} columns")
     if fp_a.has_timestamps and fp_b.has_timestamps:
-        reasons.append("both have timestamps")
-
+        reasons.append("Both tables use audit timestamps (created_at/updated_at)")
+    if fp_a.fk_count > 0 and fp_b.fk_count > 0:
+        reasons.append(f"Both have foreign keys ({fp_a.fk_count} vs {fp_b.fk_count})")
+    if fp_a.pk_column_count == fp_b.pk_column_count:
+        reasons.append(f"Same primary key structure ({fp_a.pk_column_count} PK columns)")
+    
     return {
         "structural_score": structural,
         "semantic_score": semantic,
@@ -77,16 +83,23 @@ def score_column_pair(
 
     reasons = []
     if col_a.name == col_b.name:
-        reasons.append(f"exact name match: '{col_a.name}'")
+        reasons.append(f"Exact name match: '{col_a.name}'")
+    elif semantic >= 0.8:
+        reasons.append(f"Strong name similarity: '{col_a.name}' ↔ '{col_b.name}' ({semantic:.0%})")
     elif semantic >= 0.6:
-        reasons.append(f"names similar: '{col_a.name}' ↔ '{col_b.name}'")
+        reasons.append(f"Synonym match: '{col_a.name}' ↔ '{col_b.name}' ({semantic:.0%})")
     if col_a.col_type == col_b.col_type:
-        reasons.append(f"same type: {col_a.col_type.value}")
+        reasons.append(f"Same type: {col_a.col_type.value}")
+    elif structural >= 0.6:
+        reasons.append(f"Compatible types: {col_a.col_type.value} ↔ {col_b.col_type.value}")
     if col_a.is_primary_key and col_b.is_primary_key:
-        reasons.append("both primary keys")
+        reasons.append("Both primary keys")
     if col_a.foreign_key and col_b.foreign_key:
-        reasons.append("both foreign keys")
-
+        reasons.append("Both foreign keys")
+    if col_a.nullable == col_b.nullable:
+        reasons.append(f"Same nullability: {'nullable' if col_a.nullable else 'NOT NULL'}")
+    if col_a.is_auto_increment and col_b.is_auto_increment:
+        reasons.append("Both auto-increment")
     return {
         "structural_score": structural,
         "semantic_score": semantic,
