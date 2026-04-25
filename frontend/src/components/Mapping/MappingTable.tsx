@@ -18,6 +18,7 @@ import BulkActionBar from './BulkActionBar'
 import MappingDiffView from './MappingDiffView'
 import TemplateManager from './TemplateManager'
 import HistoryPanel from './HistoryPanel'
+import ExportDrawer from './ExportDrawer'
 
 interface Props {
   result: ReconciliationResult
@@ -35,6 +36,7 @@ export default function MappingTable({ result }: Props) {
   const [selectedForBulk, setSelectedForBulk] = useState<Set<number>>(new Set())
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -304,6 +306,21 @@ export default function MappingTable({ result }: Props) {
               📋 History {history.length > 0 && `(${history.length})`}
             </span>
           </motion.button>
+          <motion.button
+            onClick={() => setShowExport(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`group relative overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+              isDark
+                ? 'border-white/[0.1] bg-white/[0.05] text-white/60 hover:border-white/[0.15] hover:bg-white/[0.08] hover:text-white/80'
+                : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 hover:text-slate-800'
+            }`}
+            title="Export migration files"
+          >
+            <span className="relative flex items-center gap-1.5">
+              📥 Export
+            </span>
+          </motion.button>
         </div>
       </div>
 
@@ -316,6 +333,11 @@ export default function MappingTable({ result }: Props) {
         mapping={selectedMapping}
         onClose={() => setSelectedMapping(null)}
         onSuggestionAccept={handleSuggestionAccept}
+      />
+
+      <ExportDrawer
+        result={showExport ? result : null}
+        onClose={() => setShowExport(false)}
       />
 
       <div className="grid grid-cols-3 gap-3">
