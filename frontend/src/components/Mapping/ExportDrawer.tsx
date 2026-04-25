@@ -61,7 +61,7 @@ export default function ExportDrawer({ result, onClose }: Props) {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl overflow-y-auto border-l ${
+            className={`fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-2xl overflow-y-auto border-l ${
               isDark
                 ? 'bg-[#0a0a12] border-white/[0.07]'
                 : 'bg-white border-slate-200'

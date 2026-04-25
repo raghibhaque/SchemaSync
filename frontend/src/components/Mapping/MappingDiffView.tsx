@@ -52,20 +52,20 @@ export default function MappingDiffView({ mapping, onClose }: Props) {
           >
             <motion.div
               onClick={(e) => e.stopPropagation()}
-              className={`w-full max-w-5xl rounded-xl border backdrop-blur-sm shadow-2xl max-h-[90vh] overflow-hidden flex flex-col ${
+              className={`w-full sm:max-w-5xl rounded-lg sm:rounded-xl border backdrop-blur-sm shadow-2xl max-h-[90vh] overflow-hidden flex flex-col ${
                 isDark
                   ? 'border-white/[0.12] bg-[#0a0a12]/95'
                   : 'border-slate-300 bg-white/95'
               }`}
             >
               {/* Header */}
-              <div className={`sticky top-0 border-b px-6 py-4 flex items-center justify-between ${
+              <div className={`sticky top-0 border-b px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between ${
                 isDark
                   ? 'border-white/[0.07] bg-[#06060e]/80'
                   : 'border-slate-200 bg-slate-50/80'
               }`}>
                 <div>
-                  <h2 className={`text-lg font-semibold ${
+                  <h2 className={`text-base sm:text-lg font-semibold ${
                     isDark ? 'text-white/80' : 'text-slate-900'
                   }`}>Schema Comparison</h2>
                   <p className={`mt-1 text-xs ${
@@ -86,9 +86,9 @@ export default function MappingDiffView({ mapping, onClose }: Props) {
               </div>
 
               {/* Content */}
-              <div className="overflow-y-auto flex-1 p-6 space-y-6">
+              <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-6">
                 {/* Summary stats */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                   <StatBox label="Columns Mapped" value={columnMappings.length} color="emerald" />
                   <StatBox label="Source Unmapped" value={unmappedSourceCols.length} color="amber" />
                   <StatBox label="Target Unmapped" value={unmappedTargetCols.length} color="amber" />
@@ -96,7 +96,7 @@ export default function MappingDiffView({ mapping, onClose }: Props) {
                 </div>
 
                 {/* Diff view */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Source */}
                   <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-4 space-y-3">
                     <h3 className="text-sm font-semibold text-indigo-300 flex items-center gap-2">

@@ -342,7 +342,7 @@ export default function MappingTable({ result }: Props) {
         onClose={() => setShowExport(false)}
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat label="Tables matched" value={`${tables_matched} / ${tables_in_a}`} isDark={isDark} />
         <Stat
           label="Avg confidence"
@@ -808,8 +808,8 @@ function Row({
             transition={{ duration: 0.22, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="border-t border-white/[0.05] bg-gradient-to-b from-white/[0.03] to-white/[0.01] px-5 pb-4 pt-3">
-              <div className="mb-4 grid grid-cols-2 gap-4 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
+            <div className="border-t border-white/[0.05] bg-gradient-to-b from-white/[0.03] to-white/[0.01] px-4 sm:px-5 pb-3 sm:pb-4 pt-3">
+              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
                 <div>
                   <p className="text-xs font-semibold text-white/40 mb-1">Source Stats</p>
                   <div className="space-y-1">
