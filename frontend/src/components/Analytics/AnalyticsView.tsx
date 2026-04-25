@@ -3,6 +3,7 @@ import { TrendingUp, AlertCircle, Zap, BarChart3 } from 'lucide-react'
 import type { ReconciliationResult } from '../../types'
 import { cn } from '@/lib/utils'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
+import ReconciliationStats from '../shared/ReconciliationStats'
 
 interface Props { result: ReconciliationResult }
 
@@ -37,6 +38,9 @@ export default function AnalyticsView({ result }: Props) {
 
   return (
     <div className="space-y-6">
+
+      {/* Reconciliation Stats */}
+      <ReconciliationStats result={result} />
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
