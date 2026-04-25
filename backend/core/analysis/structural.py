@@ -188,12 +188,22 @@ def structural_similarity_tables(a: TableFingerprint, b: TableFingerprint) -> fl
 
 
 _COMPATIBLE_TYPES = [
+    # Integer family: TINYINT(1)/SMALLINT/INT/BIGINT are all integer-like
     {ColumnType.INTEGER, ColumnType.BIGINT, ColumnType.SMALLINT},
+    # Float / decimal family
     {ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.DECIMAL},
+    # String family: CHAR/VARCHAR/TEXT are all character data
     {ColumnType.VARCHAR, ColumnType.TEXT, ColumnType.CHAR},
+    # Text family extended: BLOB and JSON are often stored as text
+    {ColumnType.TEXT, ColumnType.BLOB, ColumnType.JSON},
+    # Temporal: DATETIME and TIMESTAMP are functionally equivalent
     {ColumnType.DATETIME, ColumnType.TIMESTAMP},
+    # Temporal extended: DATE can broaden to DATETIME/TIMESTAMP
     {ColumnType.DATE, ColumnType.DATETIME, ColumnType.TIMESTAMP},
-    {ColumnType.BOOLEAN, ColumnType.SMALLINT},
+    # Boolean: stored as SMALLINT(1) or INTEGER in many engines
+    {ColumnType.BOOLEAN, ColumnType.SMALLINT, ColumnType.INTEGER},
+    # UUID: often stored as VARCHAR or CHAR(36)
+    {ColumnType.UUID, ColumnType.VARCHAR, ColumnType.CHAR},
 ]
 
 
