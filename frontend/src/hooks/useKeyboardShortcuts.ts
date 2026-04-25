@@ -7,6 +7,8 @@ export function useKeyboardShortcuts(actions: {
   onArrowUp?: () => void
   onEnter?: () => void
   onSlash?: () => void
+  onUndo?: () => void
+  onRedo?: () => void
 }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -45,6 +47,18 @@ export function useKeyboardShortcuts(actions: {
       if (e.key === 'Enter' && !isInput) {
         e.preventDefault()
         actions.onEnter?.()
+      }
+
+      // Undo: Ctrl+Z or Cmd+Z
+      if (isMeta && e.key === 'z' && !isTextArea) {
+        e.preventDefault()
+        actions.onUndo?.()
+      }
+
+      // Redo: Ctrl+Shift+Z or Cmd+Shift+Z or Ctrl+Y or Cmd+Y
+      if ((isMeta && e.shiftKey && e.key === 'z') || (isMeta && e.key === 'y')) {
+        e.preventDefault()
+        actions.onRedo?.()
       }
     }
 
