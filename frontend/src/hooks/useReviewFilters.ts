@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import type { TableMapping } from '../../types'
-import type { ReviewStatus } from '../../types/review'
+import type { TableMapping, ColumnMapping } from '../types'
+import type { ReviewStatus } from '../types/review'
 
 interface FilterOptions {
   reviewStatus?: ReviewStatus | null
@@ -19,7 +19,7 @@ export function useReviewFilters(mappings: TableMapping[], reviewStates: Record<
   const filteredMappings = useMemo(() => {
     return mappings.filter(mapping => {
       // Get mapping ID (using table combo as unique identifier)
-      const mappingId = `${mapping.table_a.id}:${mapping.table_b.id}`
+      const mappingId = `${mapping.table_a.name}:${mapping.table_b.name}`
       const reviewStatus = reviewStates[mappingId] || 'unreviewed'
 
       // Filter by review status
@@ -29,7 +29,7 @@ export function useReviewFilters(mappings: TableMapping[], reviewStates: Record<
 
       // Filter by conflicts
       if (activeFilters.showConflicts) {
-        const hasConflicts = mapping.column_mappings?.some(cm => cm.conflicts && cm.conflicts.length > 0)
+        const hasConflicts = mapping.column_mappings?.some((cm: ColumnMapping) => cm.conflicts && cm.conflicts.length > 0)
         if (!hasConflicts) {
           return false
         }
@@ -38,7 +38,7 @@ export function useReviewFilters(mappings: TableMapping[], reviewStates: Record<
       // Filter by minimum confidence
       if (activeFilters.minConfidence && activeFilters.minConfidence > 0) {
         const minConfidenceInMapping = Math.min(
-          ...(mapping.column_mappings?.map(cm => cm.confidence) || [1])
+          ...(mapping.column_mappings?.map((cm: ColumnMapping) => cm.confidence) || [1])
         )
         if (minConfidenceInMapping < activeFilters.minConfidence) {
           return false
@@ -52,22 +52,22 @@ export function useReviewFilters(mappings: TableMapping[], reviewStates: Record<
   // Count by status
   const counts = useMemo(() => {
     const unreviewed = mappings.filter(m => {
-      const mappingId = `${m.table_a.id}:${m.table_b.id}`
+      const mappingId = `${m.table_a.name}:${m.table_b.name}`
       return !reviewStates[mappingId]
     }).length
 
     const approved = mappings.filter(m => {
-      const mappingId = `${m.table_a.id}:${m.table_b.id}`
+      const mappingId = `${m.table_a.name}:${m.table_b.name}`
       return reviewStates[mappingId] === 'approved'
     }).length
 
     const rejected = mappings.filter(m => {
-      const mappingId = `${m.table_a.id}:${m.table_b.id}`
+      const mappingId = `${m.table_a.name}:${m.table_b.name}`
       return reviewStates[mappingId] === 'rejected'
     }).length
 
     const modified = mappings.filter(m => {
-      const mappingId = `${m.table_a.id}:${m.table_b.id}`
+      const mappingId = `${m.table_a.name}:${m.table_b.name}`
       return reviewStates[mappingId] === 'modified'
     }).length
 

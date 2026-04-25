@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Save, X } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { TableMapping, Column } from '../../types'
+import type { TableMapping } from '../../types'
 
 interface Props {
   mapping: TableMapping
@@ -13,10 +13,10 @@ interface Props {
 
 export default function MappingEditor({ mapping, isOpen, onClose, onSave }: Props) {
   const [selectedSourceId, setSelectedSourceId] = useState(
-    mapping.column_mappings?.[0]?.col_a?.id || ''
+    mapping.column_mappings?.[0]?.col_a?.name || ''
   )
   const [selectedTargetId, setSelectedTargetId] = useState(
-    mapping.column_mappings?.[0]?.col_b?.id || ''
+    mapping.column_mappings?.[0]?.col_b?.name || ''
   )
 
   if (!isOpen) return null
@@ -85,7 +85,7 @@ export default function MappingEditor({ mapping, isOpen, onClose, onSave }: Prop
             >
               <option value="">Select source column...</option>
               {sourceColumns.map(col => (
-                <option key={col.id} value={col.id}>
+                <option key={col.name} value={col.name}>
                   {col.name} ({col.data_type?.base_type || 'unknown'})
                 </option>
               ))}
@@ -106,7 +106,7 @@ export default function MappingEditor({ mapping, isOpen, onClose, onSave }: Prop
             >
               <option value="">Select target column...</option>
               {targetColumns.map(col => (
-                <option key={col.id} value={col.id}>
+                <option key={col.name} value={col.name}>
                   {col.name} ({col.data_type?.base_type || 'unknown'})
                 </option>
               ))}

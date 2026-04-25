@@ -119,6 +119,15 @@ export function useReviewState(sessionId: string) {
   // Get all reviews
   const getAll = useCallback(() => reviews, [reviews])
 
+  // Get review statuses in format expected by filters
+  const getStatuses = useCallback((): Record<string, ReviewStatus> => {
+    const statuses: Record<string, ReviewStatus> = {}
+    Object.entries(reviews).forEach(([id, decision]) => {
+      statuses[id] = decision.status
+    })
+    return statuses
+  }, [reviews])
+
   return {
     reviews,
     approve,
@@ -130,5 +139,6 @@ export function useReviewState(sessionId: string) {
     stats,
     clearAll,
     getAll,
+    getStatuses,
   }
 }

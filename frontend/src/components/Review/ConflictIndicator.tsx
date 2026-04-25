@@ -61,7 +61,7 @@ export default function ConflictIndicator({ mapping, expanded: controlledExpande
             className="overflow-hidden"
           >
             <div className="space-y-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              {mapping.conflicts!.map((conflict, i) => (
+              {mapping.conflicts!.map((conflict: any, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}

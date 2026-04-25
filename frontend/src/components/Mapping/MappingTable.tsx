@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ArrowRight, AlertTriangle, Search, X } from 'lucide-react'
+import { ChevronDown, ArrowRight, AlertTriangle, Search, X, Undo2, Redo2 } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { ReconciliationResult, TableMapping } from '../../types'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,9 @@ import { useCustomRules } from '../../hooks/useCustomRules'
 import { useProgressMetrics } from '../../hooks/useProgressMetrics'
 import { useConflictResolutions } from '../../hooks/useConflictResolutions'
 import { useTableStatistics } from '../../hooks/useTableStatistics'
+import { useReviewState } from '../../hooks/useReviewState'
+import { useReviewFilters } from '../../hooks/useReviewFilters'
+import { useReviewHistory } from '../../hooks/useReviewHistory'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import ProgressDashboard from './ProgressDashboard'
 import PerformanceMetrics from './PerformanceMetrics'
@@ -31,6 +34,11 @@ import SchemaSummaryCard from './SchemaSummaryCard'
 import StatisticsExportPanel from './StatisticsExportPanel'
 import StatisticsDashboard from './StatisticsDashboard'
 import StatisticsGuide from './StatisticsGuide'
+import ReviewStatusBadge from '../Review/ReviewStatusBadge'
+import ReviewControls from '../Review/ReviewControls'
+import ReviewProgressBar from '../Review/ReviewProgressBar'
+import MappingEditor from '../Review/MappingEditor'
+import ConflictIndicator from '../Review/ConflictIndicator'
 
 interface Props {
   result: ReconciliationResult
@@ -52,6 +60,9 @@ export default function MappingTable({ result }: Props) {
   const [showRules, setShowRules] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editingMappingIndex, setEditingMappingIndex] = useState<number | null>(null)
+  const [showReviewFilters, setShowReviewFilters] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const rowsRef = useRef<Map<number, HTMLDivElement>>(new Map())
@@ -64,6 +75,11 @@ export default function MappingTable({ result }: Props) {
     const { tables_in_a, tables_in_b, tables_matched } = result.summary
     return `${tables_in_a}_${tables_in_b}_${tables_matched}`
   }, [result.summary])
+
+  // Initialize review state management
+  const { approve, reject, markModified, reset, getStatus, stats: reviewStats, getStatuses } = useReviewState(schemaHash)
+  const { filteredMappings, activeFilters, setReviewStatusFilter, setConflictsFilter, setConfidenceFilter, resetFilters } = useReviewFilters(result.table_mappings ?? [], getStatuses())
+  const { canUndo, canRedo, undo, redo } = useReviewHistory()
 
   const { templates, saveTemplate: saveTemplateToStorage, deleteTemplate: deleteTemplateFromStorage } = useTemplates(schemaHash)
   const { history, addEntry: addHistoryEntry, clearHistory } = useHistory(schemaHash)
@@ -141,6 +157,43 @@ export default function MappingTable({ result }: Props) {
     if (activePresetId === id) {
       setActivePresetId(null)
     }
+  }
+
+  // Review layer handlers
+  const handleApproveMapping = (mappingIndex: number) => {
+    const mapping = (result.table_mappings ?? [])[mappingIndex]
+    if (!mapping) return
+    const mappingId = `${mapping.table_a.name}:${mapping.table_b.name}`
+    approve(mappingId)
+  }
+
+  const handleRejectMapping = (mappingIndex: number) => {
+    const mapping = (result.table_mappings ?? [])[mappingIndex]
+    if (!mapping) return
+    const mappingId = `${mapping.table_a.name}:${mapping.table_b.name}`
+    reject(mappingId)
+  }
+
+  const handleEditMapping = (mappingIndex: number) => {
+    setEditingMappingIndex(mappingIndex)
+    setEditorOpen(true)
+  }
+
+  const handleSaveMappingEdit = (sourceId: string, targetId: string) => {
+    if (editingMappingIndex === null) return
+    const mapping = (result.table_mappings ?? [])[editingMappingIndex]
+    if (!mapping) return
+    const mappingId = `${mapping.table_a.name}:${mapping.table_b.name}`
+    markModified(mappingId, { sourceColumnId: sourceId, targetColumnId: targetId })
+    setEditorOpen(false)
+    setEditingMappingIndex(null)
+  }
+
+  const handleResetMapping = (mappingIndex: number) => {
+    const mapping = (result.table_mappings ?? [])[mappingIndex]
+    if (!mapping) return
+    const mappingId = `${mapping.table_a.name}:${mapping.table_b.name}`
+    reset(mappingId)
   }
 
   // Generate a unique session key for this reconciliation result
@@ -352,6 +405,124 @@ export default function MappingTable({ result }: Props) {
     <div className="space-y-6">
       <SchemaSummaryCard result={result} />
       <StatisticsDashboard result={result} />
+
+      {/* Review Progress Section */}
+      <ReviewProgressBar stats={reviewStats} />
+
+      {/* Review Toolbar */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-wrap gap-2 items-center p-4 rounded-xl border border-white/[0.08] bg-white/[0.03]"
+      >
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => canUndo && undo()}
+            disabled={!canUndo}
+            className={cn(
+              'px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1',
+              canUndo
+                ? 'border-blue-500/30 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25'
+                : 'border-white/[0.1] bg-white/[0.05] text-white/30 cursor-not-allowed'
+            )}
+            title="Undo last review action (Ctrl+Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+            Undo
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => canRedo && redo()}
+            disabled={!canRedo}
+            className={cn(
+              'px-3 py-2 rounded-lg border text-xs font-medium flex items-center gap-1',
+              canRedo
+                ? 'border-violet-500/30 bg-violet-500/15 text-violet-300 hover:bg-violet-500/25'
+                : 'border-white/[0.1] bg-white/[0.05] text-white/30 cursor-not-allowed'
+            )}
+            title="Redo last action (Ctrl+Y)"
+          >
+            <Redo2 className="h-4 w-4" />
+            Redo
+          </motion.button>
+        </div>
+
+        <div className="h-6 w-px bg-white/[0.1]" />
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowReviewFilters(!showReviewFilters)}
+            className="px-3 py-2 rounded-lg border border-white/[0.1] hover:bg-white/[0.08] text-xs font-medium text-white/70 transition-colors"
+          >
+            📋 Filters {showReviewFilters ? '▼' : '▶'}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={resetFilters}
+            className="px-3 py-2 rounded-lg border border-white/[0.1] hover:bg-white/[0.08] text-xs font-medium text-white/70 transition-colors"
+          >
+            Reset Filters
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Review Filters Panel */}
+      <AnimatePresence>
+        {showReviewFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 space-y-3"
+          >
+            <h4 className="text-sm font-semibold text-white">Review Status Filters</h4>
+            <div className="flex flex-wrap gap-2">
+              {(['unreviewed', 'approved', 'rejected', 'modified'] as const).map(status => (
+                <motion.button
+                  key={status}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setReviewStatusFilter(status)}
+                  className={cn(
+                    'px-3 py-2 rounded-lg border text-xs font-medium transition-all',
+                    activeFilters.reviewStatus === status
+                      ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-300'
+                      : 'border-white/[0.1] bg-white/[0.05] text-white/70 hover:bg-white/[0.08]'
+                  )}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </motion.button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-white/70">
+                <input
+                  type="checkbox"
+                  checked={activeFilters.showConflicts || false}
+                  onChange={e => setConflictsFilter(e.target.checked)}
+                  className="mr-2 h-4 w-4 rounded border border-white/15 bg-white/5 accent-indigo-500"
+                />
+                Show only mappings with conflicts
+              </label>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mapping Editor Modal */}
+      {editingMappingIndex !== null && (
+        <MappingEditor
+          mapping={(result.table_mappings ?? [])[editingMappingIndex]}
+          isOpen={editorOpen}
+          onClose={() => setEditorOpen(false)}
+          onSave={handleSaveMappingEdit}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-4">
         <BulkActionBar
@@ -679,6 +850,11 @@ export default function MappingTable({ result }: Props) {
                         isFocused={focusedIndex === i}
                         onFocus={() => setFocusedIndex(i)}
                         stats={tableStats[i]}
+                        reviewStatus={getStatus(`${m.table_a.name}:${m.table_b.name}`)}
+                        onApprove={() => handleApproveMapping(i)}
+                        onReject={() => handleRejectMapping(i)}
+                        onEdit={() => handleEditMapping(i)}
+                        onReset={() => handleResetMapping(i)}
                       />
                     </div>
                   )
@@ -715,6 +891,11 @@ export default function MappingTable({ result }: Props) {
                   isFocused={focusedIndex === i}
                   onFocus={() => setFocusedIndex(i)}
                   stats={tableStats[i]}
+                  reviewStatus={getStatus(`${m.table_a.name}:${m.table_b.name}`)}
+                  onApprove={() => handleApproveMapping(i)}
+                  onReject={() => handleRejectMapping(i)}
+                  onEdit={() => handleEditMapping(i)}
+                  onReset={() => handleResetMapping(i)}
                 />
               </div>
             ))
@@ -771,6 +952,11 @@ function Row({
   isFocused = false,
   onFocus,
   stats,
+  reviewStatus = 'unreviewed',
+  onApprove,
+  onReject,
+  onEdit,
+  onReset,
 }: {
   mapping: TableMapping
   index: number
@@ -787,6 +973,11 @@ function Row({
   isFocused?: boolean
   onFocus?: () => void
   stats?: any
+  reviewStatus?: 'unreviewed' | 'approved' | 'rejected' | 'modified'
+  onApprove?: () => void
+  onReject?: () => void
+  onEdit?: () => void
+  onReset?: () => void
 }) {
   // Component body starts here
 
@@ -865,6 +1056,11 @@ function Row({
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {/* Review Status Badge */}
+          {reviewStatus !== 'unreviewed' && (
+            <ReviewStatusBadge status={reviewStatus} compact showIcon />
+          )}
+
           <motion.div
             className="group relative"
             whileHover={{ scale: 1.08 }}
@@ -932,9 +1128,30 @@ function Row({
             transition={{ duration: 0.22, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="border-t border-white/[0.05] bg-gradient-to-b from-white/[0.03] to-white/[0.01] px-4 sm:px-5 pb-3 sm:pb-4 pt-3">
+            <div className="border-t border-white/[0.05] bg-gradient-to-b from-white/[0.03] to-white/[0.01] px-4 sm:px-5 pb-3 sm:pb-4 pt-3 space-y-3">
+              {/* Review Controls Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-white/70">Review & Actions</h4>
+                  <ReviewStatusBadge status={reviewStatus || 'unreviewed'} compact={false} showIcon />
+                </div>
+                <ReviewControls
+                  onApprove={onApprove || (() => {})}
+                  onReject={onReject || (() => {})}
+                  onEdit={onEdit || (() => {})}
+                  onReset={onReset && reviewStatus !== 'unreviewed' ? onReset : undefined}
+                  isReviewed={reviewStatus !== 'unreviewed'}
+                  size="md"
+                />
+              </div>
+
+              {/* Conflict Indicator */}
+              {(mapping.column_mappings ?? []).some(cm => cm.conflicts && cm.conflicts.length > 0) && (
+                <ConflictIndicator mapping={(mapping.column_mappings ?? [])[0]} expanded={false} />
+              )}
+
               {stats && (
-                <div className="mb-4">
+                <div>
                   <TableStatisticsCard stats={stats} isExpanded={isExpanded} mapping={mapping} />
                 </div>
               )}
