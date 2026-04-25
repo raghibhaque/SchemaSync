@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Download, Copy, Check, FileText } from 'lucide-react'
+import { X, Download, Copy, Check, FileText, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import type { ReconciliationResult } from '../../types'
 import { EXPORT_FORMATS } from '../../lib/exportFormats'
 import { generatePDFReport } from '../../lib/pdfReportGenerator'
 import { showToast } from '../../lib/toast'
+import MigrationOptions from './MigrationOptions'
+import MigrationPreview from './MigrationPreview'
 
 interface Props {
   result: ReconciliationResult | null
@@ -13,6 +15,8 @@ interface Props {
 
 export default function ExportDrawer({ result, onClose }: Props) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewFormat, setPreviewFormat] = useState<string>('generic-sql')
 
   if (!result) return null
 
@@ -97,6 +101,58 @@ export default function ExportDrawer({ result, onClose }: Props) {
                   <span className="font-medium">Info:</span> All exports include table/column mappings with confidence scores and TODO comments for conflicts and unmatched columns.
                 </p>
               </div>
+
+              {/* Migration Options */}
+              <MigrationOptions />
+
+              {/* Preview Section */}
+              <motion.div
+                className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-4"
+              >
+                <motion.button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="flex w-full items-center justify-between gap-2 hover:text-white/90"
+                >
+                  <div>
+                    <h3 className="font-medium text-white/80 text-left">Migration Preview</h3>
+                    <p className="mt-1 text-xs text-white/40 text-left">
+                      {EXPORT_FORMATS.find(f => f.id === previewFormat)?.name}
+                    </p>
+                  </div>
+                  <ChevronDown className={`h-5 w-5 transition-transform flex-shrink-0 ${showPreview ? 'rotate-180' : ''}`} />
+                </motion.button>
+
+                <AnimatePresence>
+                  {showPreview && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 space-y-3 overflow-hidden"
+                    >
+                      <div className="flex gap-2 flex-wrap">
+                        {EXPORT_FORMATS.map(format => (
+                          <button
+                            key={format.id}
+                            onClick={() => setPreviewFormat(format.id)}
+                            className={`text-xs px-3 py-1.5 rounded transition-colors ${
+                              previewFormat === format.id
+                                ? 'bg-indigo-500/30 text-indigo-300'
+                                : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                            }`}
+                          >
+                            {format.name}
+                          </button>
+                        ))}
+                      </div>
+                      <MigrationPreview
+                        sql={EXPORT_FORMATS.find(f => f.id === previewFormat)?.generator(result) || ''}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
 
               {/* PDF Report Section */}
               <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-4">
