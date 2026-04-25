@@ -4,6 +4,7 @@ SchemaSync Backend — FastAPI application.
 Run with: uvicorn backend.main:app --reload --port 8000
 """
 
+import logging
 import uuid
 
 from fastapi import FastAPI, HTTPException, Request
@@ -20,6 +21,10 @@ from backend.api.errors import (
     ValidationErrorDetail,
 )
 from backend.config import CORS_ORIGINS, DEBUG
+from backend.logging_config import configure_logging
+
+configure_logging(debug=DEBUG)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="SchemaSync",
@@ -112,6 +117,11 @@ async def validation_exception_handler(
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error(
+        "Unhandled exception",
+        extra={"path": request.url.path, "exc": str(exc), "request_id": _request_id(request)},
+        exc_info=True,
+    )
     return _json_error(
         500,
         ErrorCode.INTERNAL_ERROR,
