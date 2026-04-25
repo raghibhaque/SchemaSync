@@ -27,8 +27,10 @@ export default function MappingTable({ result }: Props) {
   const [reviewed, setReviewed] = useState<Set<number>>(new Set())
   const [minConfidence, setMinConfidence] = useState(0)
   const [selectedForBulk, setSelectedForBulk] = useState<Set<number>>(new Set())
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const rowsRef = useRef<Map<number, HTMLDivElement>>(new Map())
 
   // Generate a unique session key for this reconciliation result
   const sessionKey = useMemo(() => {
@@ -57,7 +59,37 @@ export default function MappingTable({ result }: Props) {
 
   useKeyboardShortcuts({
     onSearchFocus: () => searchRef.current?.focus(),
-    onEscape: () => setSearch(''),
+    onSlash: () => searchRef.current?.focus(),
+    onEscape: () => {
+      setSearch('')
+      setSelectedMapping(null)
+      setFocusedIndex(null)
+    },
+    onArrowDown: () => {
+      if (filtered.length === 0) return
+      setFocusedIndex(prev => {
+        const next = prev === null ? 0 : Math.min(prev + 1, filtered.length - 1)
+        setTimeout(() => {
+          rowsRef.current.get(next)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 0)
+        return next
+      })
+    },
+    onArrowUp: () => {
+      if (filtered.length === 0) return
+      setFocusedIndex(prev => {
+        const next = prev === null || prev === 0 ? 0 : prev - 1
+        setTimeout(() => {
+          rowsRef.current.get(next)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 0)
+        return next
+      })
+    },
+    onEnter: () => {
+      if (focusedIndex !== null && focusedIndex < filtered.length) {
+        toggle(focusedIndex)
+      }
+    },
   })
 
   const filtered = useMemo(() => {
@@ -92,8 +124,13 @@ export default function MappingTable({ result }: Props) {
       mappings = mappings.filter(m => m.confidence >= minConfidence)
     }
 
+    // Reset focused index if it's now out of bounds
+    if (focusedIndex !== null && focusedIndex >= mappings.length) {
+      setFocusedIndex(mappings.length > 0 ? mappings.length - 1 : null)
+    }
+
     return mappings
-  }, [result.table_mappings, search])
+  }, [result.table_mappings, search, minConfidence, focusedIndex])
 
   const toggle = (i: number) => {
     const s = new Set(expanded)
@@ -285,6 +322,10 @@ export default function MappingTable({ result }: Props) {
                     <div
                       key={`${m.table_a.name}-${m.table_b.name}-${i}`}
                       data-index={virtualItem.index}
+                      ref={(el) => {
+                        if (el) rowsRef.current.set(i, el)
+                        else rowsRef.current.delete(i)
+                      }}
                       style={{
                         position: 'absolute',
                         top: 0,
@@ -311,6 +352,9 @@ export default function MappingTable({ result }: Props) {
                           else newSet.add(i)
                           setSelectedForBulk(newSet)
                         }}
+                        isFocused={focusedIndex === i}
+                        onFocus={() => setFocusedIndex(i)}
+                        isDark={isDark}
                       />
                     </div>
                   )
@@ -319,26 +363,36 @@ export default function MappingTable({ result }: Props) {
             </div>
           ) : (
             filtered.map((m, i) => (
-              <Row
+              <div
                 key={`${m.table_a.name}-${m.table_b.name}-${i}`}
-                mapping={m}
-                index={i}
-                isExpanded={expanded.has(i)}
-                onToggle={() => toggle(i)}
-                isLast={i === filtered.length - 1}
-                onViewDetails={() => setSelectedMapping(m)}
-                onViewDiff={() => setDiffMapping(m)}
-                reviewed={reviewed.has(i)}
-                onToggleReviewed={() => toggleReviewed(i)}
-                searchTerm={search}
-                isBulkSelected={selectedForBulk.has(i)}
-                onBulkToggle={() => {
-                  const newSet = new Set(selectedForBulk)
-                  if (newSet.has(i)) newSet.delete(i)
-                  else newSet.add(i)
-                  setSelectedForBulk(newSet)
+                ref={(el) => {
+                  if (el) rowsRef.current.set(i, el)
+                  else rowsRef.current.delete(i)
                 }}
-              />
+              >
+                <Row
+                  mapping={m}
+                  index={i}
+                  isExpanded={expanded.has(i)}
+                  onToggle={() => toggle(i)}
+                  isLast={i === filtered.length - 1}
+                  onViewDetails={() => setSelectedMapping(m)}
+                  onViewDiff={() => setDiffMapping(m)}
+                  reviewed={reviewed.has(i)}
+                  onToggleReviewed={() => toggleReviewed(i)}
+                  searchTerm={search}
+                  isBulkSelected={selectedForBulk.has(i)}
+                  onBulkToggle={() => {
+                    const newSet = new Set(selectedForBulk)
+                    if (newSet.has(i)) newSet.delete(i)
+                    else newSet.add(i)
+                    setSelectedForBulk(newSet)
+                  }}
+                  isFocused={focusedIndex === i}
+                  onFocus={() => setFocusedIndex(i)}
+                  isDark={isDark}
+                />
+              </div>
             ))
           )}
         </div>
@@ -402,6 +456,9 @@ function Row({
   searchTerm = '',
   isBulkSelected = false,
   onBulkToggle,
+  isFocused = false,
+  onFocus,
+  isDark = true,
 }: {
   mapping: TableMapping
   index: number
@@ -415,6 +472,9 @@ function Row({
   searchTerm?: string
   isBulkSelected?: boolean
   onBulkToggle?: () => void
+  isFocused?: boolean
+  onFocus?: () => void
+  isDark?: boolean
 }) {
   const sourceTypes = Array.from(
     new Set(
@@ -434,14 +494,23 @@ function Row({
 
   return (
     <div className={cn(
-      !isLast && 'border-b border-white/[0.05]',
-      reviewed && 'bg-gradient-to-r from-green-900/[0.15] to-transparent'
+      'transition-all',
+      !isLast && isDark ? 'border-b border-white/[0.05]' : !isLast ? 'border-b border-slate-300' : '',
+      reviewed && isDark && 'bg-gradient-to-r from-green-900/[0.15] to-transparent',
+      reviewed && !isDark && 'bg-gradient-to-r from-green-100 to-transparent',
+      isFocused && isDark && 'ring-1 ring-indigo-400/50 bg-white/[0.06]',
+      isFocused && !isDark && 'ring-1 ring-indigo-500/50 bg-slate-200'
     )}>
       <motion.button
         type="button"
         onClick={onToggle}
-        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
-        className="group flex w-full items-center gap-4 px-5 py-4 text-left transition-all"
+        onMouseEnter={onFocus}
+        onMouseDown={onFocus}
+        whileHover={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)' }}
+        className={cn(
+          'group flex w-full items-center gap-4 px-5 py-4 text-left transition-all',
+          isDark ? '' : 'text-slate-900'
+        )}
         initial={false}
       >
         <motion.input
