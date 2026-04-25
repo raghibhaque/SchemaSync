@@ -104,61 +104,100 @@ export default function ExportResults({ result }: Props) {
   const formatSize = (new Blob([exportData]).size / 1024).toFixed(1)
 
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white/70">Export Results</h3>
-        <div className="text-xs text-white/40">{formatSize} KB</div>
-      </div>
-
-      {/* Format selector */}
-      <div className="flex gap-2">
-        {(['json', 'csv'] as const).map(fmt => (
-          <motion.button
-            key={fmt}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedFormat(fmt)}
-            className={cn(
-              'flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all',
-              selectedFormat === fmt
-                ? 'border border-indigo-500/30 bg-indigo-500/10 text-indigo-300'
-                : 'border border-white/[0.06] bg-white/[0.02] text-white/50 hover:border-white/[0.12] hover:bg-white/[0.05]'
-            )}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-xl border border-white/[0.1] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+    >
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-bold text-white/90 uppercase tracking-widest flex items-center gap-2">
+            <Download className="h-4 w-4 text-indigo-400" />
+            Export Results
+          </h3>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-xs font-semibold text-white/50 bg-white/[0.06] px-3 py-1 rounded-full"
           >
-            .{fmt.toUpperCase()}
+            {formatSize} KB
+          </motion.div>
+        </div>
+
+        {/* Format selector */}
+        <div className="flex gap-2 mb-5">
+          {(['json', 'csv'] as const).map((fmt, idx) => (
+            <motion.button
+              key={fmt}
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setSelectedFormat(fmt)}
+              className={cn(
+                'flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all border',
+                selectedFormat === fmt
+                  ? 'border-indigo-500/40 bg-gradient-to-br from-indigo-500/15 to-indigo-600/5 text-indigo-300 shadow-[0_8px_16px_rgba(99,102,241,0.2)]'
+                  : 'border-white/[0.08] bg-white/[0.04] text-white/60 hover:border-white/[0.15] hover:bg-white/[0.08]'
+              )}
+            >
+              .{fmt.toUpperCase()}
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Preview */}
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-lg border border-white/[0.08] bg-gradient-to-br from-black/40 to-white/[0.02] p-4 max-h-48 overflow-hidden mb-5 font-mono text-[9px] leading-relaxed"
+        >
+          <pre className="text-white/50 overflow-auto custom-scrollbar">
+            {exportData.slice(0, 400)}...
+          </pre>
+        </motion.div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <motion.button
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            whileHover={{ scale: 1.04, y: -1 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={handleCopy}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-white/[0.1] bg-gradient-to-br from-white/[0.08] to-white/[0.02] px-4 py-2.5 text-sm font-semibold text-white/70 hover:border-white/[0.18] hover:bg-gradient-to-br hover:from-white/[0.12] hover:to-white/[0.04] hover:text-white/90 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+          >
+            <motion.span
+              key={copied ? 'check' : 'copy'}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center"
+            >
+              {copied ? (
+                <><Check className="h-4 w-4 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+              ) : (
+                <><Copy className="h-4 w-4" /><span>Copy</span></>
+              )}
+            </motion.span>
           </motion.button>
-        ))}
-      </div>
 
-      {/* Preview */}
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 max-h-40 overflow-hidden">
-        <pre className="text-[10px] text-white/40 font-mono overflow-auto">
-          {exportData.slice(0, 300)}...
-        </pre>
+          <motion.button
+            initial={{ opacity: 0, x: 4 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.04, y: -1 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={handleDownload}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 to-indigo-600/5 px-4 py-2.5 text-sm font-semibold text-indigo-300 hover:border-indigo-500/50 hover:bg-gradient-to-br hover:from-indigo-500/25 hover:to-indigo-600/10 transition-all shadow-[0_8px_16px_rgba(99,102,241,0.2)]"
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </motion.button>
+        </div>
       </div>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleCopy}
-          className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/70 hover:border-white/[0.14] hover:bg-white/[0.07] transition-all"
-        >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copied ? 'Copied!' : 'Copy'}
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleDownload}
-          className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-sm font-medium text-indigo-300 hover:border-indigo-500/30 hover:bg-indigo-500/15 transition-all"
-        >
-          <Download className="h-4 w-4" />
-          Download
-        </motion.button>
-      </div>
-    </div>
+    </motion.div>
   )
 }
