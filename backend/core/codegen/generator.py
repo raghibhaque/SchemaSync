@@ -73,6 +73,92 @@ def generate_migration_sql(
     return "\n".join(lines)
 
 
+def generate_alter_table_migration(
+    result: ReconciliationResult,
+    source: Schema,
+    target: Schema,
+) -> str:
+    """Generate ALTER TABLE migration (incremental changes instead of DROP+CREATE)."""
+    lines = []
+    lines.append(f"-- ═══════════════════════════════════════════════════════════")
+    lines.append(f"-- SchemaSync ALTER TABLE Migration: {source.name} → {target.name}")
+    lines.append(f"-- Generated automatically — incremental approach (no data loss)")
+    lines.append(f"-- ═══════════════════════════════════════════════════════════")
+    lines.append("")
+    lines.append("BEGIN;")
+    lines.append("")
+    lines.append("-- ⚠ WARNING: Auto-generated ALTER TABLE migration")
+    lines.append("-- This approach preserves existing data and avoids DROP TABLE")
+    lines.append("-- Review all changes carefully before executing")
+    lines.append("")
+
+    for tm in result.table_mappings:
+        src_table = source.get_table(tm.source_table)
+        tgt_table = target.get_table(tm.target_table)
+        if not src_table or not tgt_table:
+            continue
+
+        lines.append(f"-- ─── {tm.source_table} → {tm.target_table} "
+                      f"(confidence: {tm.combined_score:.0%}) ───")
+        lines.append("")
+
+        # Rename table if names differ
+        if tm.source_table != tm.target_table:
+            lines.append(f"RENAME TABLE {tm.source_table} TO {tm.target_table};")
+            lines.append("")
+
+        # Rename columns that exist in both tables but have different names
+        for cm in tm.column_mappings:
+            if cm.source_column != cm.target_column:
+                lines.append(f"ALTER TABLE {tm.target_table} RENAME COLUMN {cm.source_column} TO {cm.target_column};")
+
+        if any(cm.source_column != cm.target_column for cm in tm.column_mappings):
+            lines.append("")
+
+        # Alter column types where they differ
+        for cm in tm.column_mappings:
+            src_col = src_table.get_column(cm.source_column)
+            tgt_col = tgt_table.get_column(cm.target_column)
+
+            if src_col and tgt_col and src_col.col_type != tgt_col.col_type:
+                new_type = _col_type_to_sql(tgt_col)
+                lines.append(f"ALTER TABLE {tm.target_table} MODIFY COLUMN {cm.target_column} {new_type};")
+
+        if any(
+            source.get_table(tm.source_table).get_column(cm.source_column).col_type !=
+            target.get_table(tm.target_table).get_column(cm.target_column).col_type
+            for cm in tm.column_mappings
+            if source.get_table(tm.source_table).get_column(cm.source_column) and
+               target.get_table(tm.target_table).get_column(cm.target_column)
+        ):
+            lines.append("")
+
+        # Add new columns (target-only columns)
+        for col_name in tm.unmatched_target:
+            tgt_col = tgt_table.get_column(col_name)
+            if tgt_col:
+                col_def = f"{tgt_col.name} {_col_type_to_sql(tgt_col)}"
+                if tgt_col.default_value:
+                    col_def += f" DEFAULT {tgt_col.default_value}"
+                if not tgt_col.nullable:
+                    col_def += " NOT NULL"
+                lines.append(f"ALTER TABLE {tm.target_table} ADD COLUMN {col_def};")
+
+        if tm.unmatched_target:
+            lines.append("")
+
+        # Drop columns that are source-only (optional, commented out)
+        if tm.unmatched_source:
+            for col_name in tm.unmatched_source:
+                lines.append(f"-- ALTER TABLE {tm.target_table} DROP COLUMN {col_name}; /* source-only */")
+            lines.append("")
+
+    lines.append("COMMIT;")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
 def _generate_create_table(table, schema: Schema) -> list[str]:
     lines = []
     lines.append(f"-- Drop if recreating (remove in production)")
