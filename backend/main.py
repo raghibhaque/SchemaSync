@@ -14,6 +14,9 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.api.routes import upload, reconcile, export
+from backend.api.routes.graph import router as graph_router
+from backend.api.routes.suggestions import router as suggestions_router
+from backend.api.routes.samples import router as samples_router
 from backend.api.routes.health import router as health_router
 from backend.api.errors import (
     ErrorCode, ErrorResponse,
@@ -72,10 +75,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(upload.router,   prefix=API_V1_PREFIX)
-app.include_router(reconcile.router, prefix=API_V1_PREFIX)
-app.include_router(export.router,    prefix=API_V1_PREFIX)
-app.include_router(health_router,    prefix=API_V1_PREFIX)
+app.include_router(upload.router,       prefix=API_V1_PREFIX)
+app.include_router(reconcile.router,   prefix=API_V1_PREFIX)
+app.include_router(export.router,      prefix=API_V1_PREFIX)
+app.include_router(graph_router,       prefix=API_V1_PREFIX)
+app.include_router(suggestions_router, prefix=API_V1_PREFIX)
+app.include_router(samples_router,     prefix=API_V1_PREFIX)
+app.include_router(health_router,      prefix=API_V1_PREFIX)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
