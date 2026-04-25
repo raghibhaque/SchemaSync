@@ -29,6 +29,7 @@ import MappingDiffView from './MappingDiffView'
 import TemplateManager from './TemplateManager'
 import HistoryPanel from './HistoryPanel'
 import ExportDrawer from './ExportDrawer'
+import UndoRedoBar from './UndoRedoBar'
 import TableStatisticsCard from './TableStatisticsCard'
 import SchemaSummaryCard from './SchemaSummaryCard'
 import StatisticsExportPanel from './StatisticsExportPanel'
@@ -252,6 +253,16 @@ export default function MappingTable({ result }: Props) {
     onEnter: () => {
       if (focusedIndex !== null && focusedIndex < filtered.length) {
         toggle(focusedIndex)
+      }
+    },
+    onUndo: () => {
+      if (canUndo) {
+        undo()
+      }
+    },
+    onRedo: () => {
+      if (canRedo) {
+        redo()
       }
     },
   })
