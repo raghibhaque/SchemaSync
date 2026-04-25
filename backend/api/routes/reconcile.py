@@ -2,17 +2,31 @@
 Reconcile route — runs the full reconciliation pipeline.
 """
 
+import re
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from backend.api.models.requests import ReconcileRequest, DemoRequest
 from backend.api.models.responses import ReconcileResponse, JobSubmitResponse, JobStatusResponse
 from backend.core.parsers.sql_ddl import SQLDDLParser
+from backend.core.parsers.prisma import PrismaParser
+from backend.core.parsers.base import BaseParser
 from backend.core.reconciliation.engine import ReconciliationEngine
 from backend.config import DEMO_DIR, UPLOAD_DIR
 from backend.services.pipeline import create_job, get_job, run_reconciliation_job
 
 router = APIRouter(prefix="/reconcile", tags=["reconcile"])
-parser = SQLDDLParser()
+_sql_parser = SQLDDLParser()
+_prisma_parser = PrismaParser()
+parser = _sql_parser  # used by raw-SQL endpoints
 engine = ReconciliationEngine()
+
+
+def _detect_parser(text: str) -> BaseParser:
+    if _sql_parser.can_parse(text):
+        return _sql_parser
+    if _prisma_parser.can_parse(text):
+        return _prisma_parser
+    raise HTTPException(400, "Could not detect schema format (no CREATE TABLE or Prisma model found)")
 
 
 @router.post("/demo", response_model=ReconcileResponse)
@@ -84,14 +98,14 @@ async def reconcile_files(source_file: str, target_file: str):
         if not target_path.exists():
             raise HTTPException(404, f"Target file not found: {target_file}")
 
-        source_sql = source_path.read_text()
-        target_sql = target_path.read_text()
+        source_text = source_path.read_text()
+        target_text = target_path.read_text()
 
-        source_name = source_file.replace(".sql", "").replace("_schema", "")
-        target_name = target_file.replace(".sql", "").replace("_schema", "")
+        source_name = re.sub(r"\.(sql|prisma|json)$", "", source_file).replace("_schema", "")
+        target_name = re.sub(r"\.(sql|prisma|json)$", "", target_file).replace("_schema", "")
 
-        source_schema = parser.parse(source_sql, schema_name=source_name)
-        target_schema = parser.parse(target_sql, schema_name=target_name)
+        source_schema = _detect_parser(source_text).parse(source_text, schema_name=source_name)
+        target_schema = _detect_parser(target_text).parse(target_text, schema_name=target_name)
 
         result = engine.reconcile(source_schema, target_schema)
 
@@ -204,11 +218,14 @@ async def reconcile_async_files(source_file: str, target_file: str, background_t
     if not target_path.exists():
         raise HTTPException(404, f"Target file not found: {target_file}")
 
-    source_name = source_file.replace(".sql", "").replace("_schema", "")
-    target_name = target_file.replace(".sql", "").replace("_schema", "")
+    source_text = source_path.read_text()
+    target_text = target_path.read_text()
 
-    source = parser.parse(source_path.read_text(), schema_name=source_name)
-    target = parser.parse(target_path.read_text(), schema_name=target_name)
+    source_name = re.sub(r"\.(sql|prisma|json)$", "", source_file).replace("_schema", "")
+    target_name = re.sub(r"\.(sql|prisma|json)$", "", target_file).replace("_schema", "")
+
+    source = _detect_parser(source_text).parse(source_text, schema_name=source_name)
+    target = _detect_parser(target_text).parse(target_text, schema_name=target_name)
 
     job = create_job()
     background_tasks.add_task(run_reconciliation_job, job.id, source, target)
