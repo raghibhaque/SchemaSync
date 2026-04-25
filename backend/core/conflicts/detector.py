@@ -53,6 +53,19 @@ def detect_conflicts(
                     suggestion="Consider aligning nullability — NOT NULL → NULL is safe, NULL → NOT NULL needs default",
                 ))
 
+            if src_col.default_value != tgt_col.default_value and (src_col.default_value or tgt_col.default_value):
+                conflicts.append(Conflict(
+                    conflict_type="default_mismatch",
+                    source_table=tm.source_table,
+                    source_column=cm.source_column,
+                    target_table=tm.target_table,
+                    target_column=cm.target_column,
+                    source_value=src_col.default_value or "NULL",
+                    target_value=tgt_col.default_value or "NULL",
+                    severity="info",
+                    suggestion="Default values differ — update INSERT SELECT to handle both or standardize defaults",
+                ))
+
             if (src_col.max_length is not None and tgt_col.max_length is not None
                     and src_col.max_length != tgt_col.max_length):
                 severity = "warning" if src_col.max_length > tgt_col.max_length else "info"
