@@ -4,6 +4,7 @@ import type { Variants } from 'framer-motion'
 import { FileText, ArrowRight, Loader2, Database } from 'lucide-react'
 import type { ReconciliationResult } from '../../types'
 import { apiClient } from '../../lib/api'
+import { showToast } from '../../lib/toast'
 import { ElegantShape } from '../ui/shape-landing-hero'
 import { cn } from '@/lib/utils'
 
@@ -34,17 +35,23 @@ export default function UploadPanel({ onResult }: Props) {
     setError(null)
     try {
       onResult(await fn())
+      showToast('Reconciliation complete!', 'success')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const message = err instanceof Error ? err.message : 'Something went wrong'
+      setError(message)
+      showToast(message, 'error')
       setIsLoading(false)
     }
   }
 
-  const handleDemo = () =>
+  const handleDemo = () => {
+    showToast('Loading demo data...', 'info', 1500)
     run(() => apiClient.runDemo())
+  }
 
   const handleReconcile = () => {
     if (!sourceFile || !targetFile) return
+    showToast('Uploading files...', 'info', 2000)
     run(async () => {
       const [a, b] = await Promise.all([
         apiClient.uploadFile(sourceFile),

@@ -8,6 +8,7 @@ import MappingTable from './components/Mapping/MappingTable'
 import ConflictReport from './components/Conflicts/ConflictReport'
 import MigrationScaffold from './components/CodeGen/MigrationScaffold'
 import AnalyticsView from './components/Analytics/AnalyticsView'
+import ToastContainer from './components/shared/ToastContainer'
 
 type Tab = 'mappings' | 'analytics' | 'graph' | 'conflicts' | 'migration'
 
@@ -30,6 +31,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#06060e] text-white/90">
+      <ToastContainer />
       <AnimatePresence mode="wait">
         {!result ? (
           <motion.div
