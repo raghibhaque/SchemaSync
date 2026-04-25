@@ -73,6 +73,16 @@ export default function MappingTable({ result }: Props) {
     deleteTemplateFromStorage(templateId)
   }
 
+  const handleSuggestionAccept = (sourceCol: string, targetCol: string) => {
+    if (!selectedMapping) return
+    addHistoryEntry({
+      actionType: 'suggestion_accepted',
+      mappingId: `${selectedMapping.table_a.name}_${selectedMapping.table_b.name}`,
+      tableName: `${selectedMapping.table_a.name} → ${selectedMapping.table_b.name}`,
+      description: `Accepted suggestion to map "${sourceCol}" to "${targetCol}"`,
+    })
+  }
+
   // Generate a unique session key for this reconciliation result
   const sessionKey = useMemo(() => {
     const { tables_in_a, tables_in_b, tables_matched, average_confidence } = result.summary
@@ -283,6 +293,7 @@ export default function MappingTable({ result }: Props) {
       <ColumnDetailsDrawer
         mapping={selectedMapping}
         onClose={() => setSelectedMapping(null)}
+        onSuggestionAccept={handleSuggestionAccept}
       />
 
       <div className="grid grid-cols-3 gap-3">

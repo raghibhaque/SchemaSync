@@ -4,13 +4,15 @@ import type { TableMapping } from '../../types'
 import { cn } from '@/lib/utils'
 import { useTheme } from '../../hooks/useTheme'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
+import UnmatchedColumnsPanel from './UnmatchedColumnsPanel'
 
 interface Props {
   mapping: TableMapping | null
   onClose: () => void
+  onSuggestionAccept?: (sourceCol: string, targetCol: string) => void
 }
 
-export default function ColumnDetailsDrawer({ mapping, onClose }: Props) {
+export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAccept }: Props) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -72,13 +74,14 @@ export default function ColumnDetailsDrawer({ mapping, onClose }: Props) {
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-3">
+            <div className="p-6 space-y-6">
               {mapping.column_mappings.length === 0 ? (
                 <p className={`text-sm ${
                   isDark ? 'text-white/30' : 'text-slate-600'
                 }`}>No column mappings found</p>
               ) : (
-                mapping.column_mappings.map((col, i) => (
+                <div className="space-y-3">
+                  {mapping.column_mappings.map((col, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, y: 4 }}
@@ -192,9 +195,16 @@ export default function ColumnDetailsDrawer({ mapping, onClose }: Props) {
                         </div>
                       </div>
                     )}
-                  </motion.div>
-                ))
+                    </motion.div>
+                  ))}
+                </div>
               )}
+
+              <UnmatchedColumnsPanel
+                mapping={mapping}
+                onSuggestionAccept={onSuggestionAccept}
+                isDark={isDark}
+              />
             </div>
           </motion.div>
         </>
