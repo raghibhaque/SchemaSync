@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import { ConfidenceTooltip } from '../shared/ConfidenceTooltip'
+import ColumnDetailsDrawer from './ColumnDetailsDrawer'
 
 interface Props { result: ReconciliationResult }
 
 export default function MappingTable({ result }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [search, setSearch] = useState('')
+  const [selectedMapping, setSelectedMapping] = useState<TableMapping | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useKeyboardShortcuts({
@@ -36,6 +38,7 @@ export default function MappingTable({ result }: Props) {
 
   return (
     <div className="space-y-6">
+      <ColumnDetailsDrawer mapping={selectedMapping} onClose={() => setSelectedMapping(null)} />
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
@@ -74,7 +77,15 @@ export default function MappingTable({ result }: Props) {
       ) : (
         <div className="overflow-hidden rounded-xl border border-white/[0.07]">
           {filtered.map((m, i) => (
-            <Row key={i} mapping={m} index={i} isExpanded={expanded.has(i)} onToggle={() => toggle(i)} isLast={i === filtered.length - 1} />
+            <Row
+              key={i}
+              mapping={m}
+              index={i}
+              isExpanded={expanded.has(i)}
+              onToggle={() => toggle(i)}
+              isLast={i === filtered.length - 1}
+              onViewDetails={() => setSelectedMapping(m)}
+            />
           ))}
         </div>
       )}
@@ -107,12 +118,13 @@ export default function MappingTable({ result }: Props) {
   )
 }
 
-function Row({ mapping, index, isExpanded, onToggle, isLast }: {
+function Row({ mapping, index, isExpanded, onToggle, isLast, onViewDetails }: {
   mapping: TableMapping
   index: number
   isExpanded: boolean
   onToggle: () => void
   isLast: boolean
+  onViewDetails: () => void
 }) {
 
   return (
@@ -147,6 +159,20 @@ function Row({ mapping, index, isExpanded, onToggle, isLast }: {
           </div>
           <ChevronDown className={cn('h-4 w-4 text-white/25 transition-transform', isExpanded && 'rotate-180')} />
         </div>
+
+        {/* View details button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onViewDetails()
+          }}
+          className="ml-2 text-white/30 hover:text-white/60 transition-colors p-1"
+          title="View column details"
+        >
+          <ChevronDown className="h-4 w-4 -rotate-90" />
+        </motion.button>
       </motion.button>
 
       {/* Expanded column mappings */}
