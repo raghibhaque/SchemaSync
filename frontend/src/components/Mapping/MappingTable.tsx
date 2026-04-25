@@ -9,6 +9,7 @@ import { ConfidenceTooltip } from '../shared/ConfidenceTooltip'
 import ColumnDetailsDrawer from './ColumnDetailsDrawer'
 import ConfidenceFilterSlider from './ConfidenceFilterSlider'
 import BulkActionBar from './BulkActionBar'
+import MappingDiffView from './MappingDiffView'
 
 interface Props {
   result: ReconciliationResult
@@ -18,6 +19,7 @@ export default function MappingTable({ result }: Props) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [search, setSearch] = useState('')
   const [selectedMapping, setSelectedMapping] = useState<TableMapping | null>(null)
+  const [diffMapping, setDiffMapping] = useState<TableMapping | null>(null)
   const [reviewed, setReviewed] = useState<Set<number>>(new Set())
   const [minConfidence, setMinConfidence] = useState(0)
   const [selectedForBulk, setSelectedForBulk] = useState<Set<number>>(new Set())
@@ -117,6 +119,11 @@ export default function MappingTable({ result }: Props) {
         onClearSelection={() => setSelectedForBulk(new Set())}
       />
 
+      <MappingDiffView
+        mapping={diffMapping}
+        onClose={() => setDiffMapping(null)}
+      />
+
       <ColumnDetailsDrawer
         mapping={selectedMapping}
         onClose={() => setSelectedMapping(null)}
@@ -213,6 +220,7 @@ export default function MappingTable({ result }: Props) {
               onToggle={() => toggle(i)}
               isLast={i === filtered.length - 1}
               onViewDetails={() => setSelectedMapping(m)}
+              onViewDiff={() => setDiffMapping(m)}
               reviewed={reviewed.has(i)}
               onToggleReviewed={() => toggleReviewed(i)}
               searchTerm={search}
@@ -268,6 +276,7 @@ function Row({
   onToggle,
   isLast,
   onViewDetails,
+  onViewDiff,
   reviewed = false,
   onToggleReviewed,
   searchTerm = '',
@@ -280,6 +289,7 @@ function Row({
   onToggle: () => void
   isLast: boolean
   onViewDetails: () => void
+  onViewDiff: () => void
   reviewed?: boolean
   onToggleReviewed?: () => void
   searchTerm?: string
@@ -384,6 +394,19 @@ function Row({
         >
           <ChevronDown className="h-4 w-4 -rotate-90" />
         </span>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onViewDiff()
+          }}
+          className="ml-1 p-1 text-white/30 hover:text-white/60 transition-colors"
+          title="Compare source vs target"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </motion.button>
       </motion.button>
 
       <AnimatePresence>
