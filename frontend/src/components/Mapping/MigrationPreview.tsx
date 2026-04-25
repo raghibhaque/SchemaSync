@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Check, Copy, AlertCircle, AlertTriangle } from 'lucide-react'
 
 interface Props {
   sql: string
@@ -91,6 +92,8 @@ function tokenizeLine(line: string): Array<{ type: string; text: string }> {
 
 export default function MigrationPreview({ sql }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]))
+  const [copiedSectionIdx, setCopiedSectionIdx] = useState<number | null>(null)
+  const [hoveredConflictLine, setHoveredConflictLine] = useState<number | null>(null)
 
   const lines = useMemo(() => sql.split('\n'), [sql])
 
@@ -137,6 +140,19 @@ export default function MigrationPreview({ sql }: Props) {
     setExpandedSections(next)
   }
 
+  const copySectionSQL = async (idx: number, section: CodeSection) => {
+    const sectionLines = lines.slice(section.start, section.end + 1)
+    const sectionSQL = sectionLines.join('\n')
+
+    try {
+      await navigator.clipboard.writeText(sectionSQL)
+      setCopiedSectionIdx(idx)
+      setTimeout(() => setCopiedSectionIdx(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   const previewLines = lines.slice(0, 50)
   const showExpandButton = lines.length > 50
 
@@ -148,21 +164,39 @@ export default function MigrationPreview({ sql }: Props) {
       </div>
 
       {sections.length > 0 && (
-        <div className="mb-3 space-y-1">
+        <div className="mb-3 space-y-2">
           <p className="text-xs text-white/50">Sections:</p>
           <div className="flex flex-wrap gap-2">
             {sections.map((section, idx) => (
-              <button
-                key={idx}
-                onClick={() => toggleSection(idx)}
-                className={`text-xs px-2 py-1 rounded transition-colors ${
-                  expandedSections.has(idx)
-                    ? 'bg-indigo-500/30 text-indigo-300'
-                    : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
-                } ${section.hasConflicts ? 'border border-amber-500/30' : ''}`}
-              >
-                {section.title}
-              </button>
+              <div key={idx} className="flex items-center gap-1">
+                <button
+                  onClick={() => toggleSection(idx)}
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    expandedSections.has(idx)
+                      ? 'bg-indigo-500/30 text-indigo-300'
+                      : 'bg-white/[0.05] text-white/50 hover:bg-white/[0.08]'
+                  } ${section.hasConflicts ? 'border border-amber-500/30' : ''}`}
+                >
+                  {section.title}
+                </button>
+                <button
+                  onClick={() => copySectionSQL(idx, section)}
+                  className="text-xs px-1.5 py-1 rounded bg-white/[0.05] text-white/40 hover:bg-white/[0.1] hover:text-white/60 transition-colors flex items-center gap-1"
+                  title="Copy this section"
+                >
+                  {copiedSectionIdx === idx ? (
+                    <>
+                      <Check size={12} />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -173,29 +207,61 @@ export default function MigrationPreview({ sql }: Props) {
           {previewLines.map((line, idx) => {
             const hasConflict = line.includes('⚠')
             const hasRisk = line.includes('RISK')
-            const bgColor = hasConflict || hasRisk ? ' bg-orange-500/10' : ''
+            const isAnnotated = hasConflict || hasRisk
+
+            let bgColor = ''
+            let borderColor = ''
+            let icon = null
+            let annotationText = ''
+
+            if (hasConflict) {
+              bgColor = 'bg-amber-500/15'
+              borderColor = 'border-l-2 border-amber-500/50'
+              icon = <AlertCircle size={14} className="text-amber-400 flex-shrink-0" />
+              annotationText = line.includes('CONFLICT:') ? line.split('CONFLICT:')[1]?.trim() : 'Potential conflict'
+            } else if (hasRisk) {
+              bgColor = 'bg-rose-500/15'
+              borderColor = 'border-l-2 border-rose-500/50'
+              icon = <AlertTriangle size={14} className="text-rose-400 flex-shrink-0" />
+              annotationText = line.includes('RISK:') ? line.split('RISK:')[1]?.trim() : 'Data loss risk'
+            }
 
             return (
               <div
                 key={idx}
-                className={`flex gap-3 py-0.5${bgColor}`}
+                className="relative"
+                onMouseEnter={() => isAnnotated && setHoveredConflictLine(idx)}
+                onMouseLeave={() => setHoveredConflictLine(null)}
               >
-                <span className="text-white/30 select-none min-w-[2rem]">{idx + 1}</span>
-                <div>
-                  {tokenizeLine(line).map((token, tokenIdx) => {
-                    const textColor =
-                      token.type === 'keyword' ? 'text-blue-400' :
-                      token.type === 'string' ? 'text-emerald-400' :
-                      token.type === 'comment' ? 'text-white/40' :
-                      'text-white/70'
+                <div
+                  className={`flex gap-3 py-0.5${bgColor ? ' ' + bgColor : ''}${borderColor ? ' ' + borderColor : ''}`}
+                >
+                  <span className="text-white/30 select-none min-w-[2rem]">{idx + 1}</span>
+                  {isAnnotated && icon && (
+                    <div className="flex-shrink-0 pt-0.5">{icon}</div>
+                  )}
+                  <div className="flex-1">
+                    {tokenizeLine(line).map((token, tokenIdx) => {
+                      const textColor =
+                        token.type === 'keyword' ? 'text-blue-400' :
+                        token.type === 'string' ? 'text-emerald-400' :
+                        token.type === 'comment' ? 'text-white/40' :
+                        'text-white/70'
 
-                    return (
-                      <span key={tokenIdx} className={textColor}>
-                        {token.text}
-                      </span>
-                    )
-                  })}
+                      return (
+                        <span key={tokenIdx} className={textColor}>
+                          {token.text}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
+
+                {hoveredConflictLine === idx && isAnnotated && (
+                  <div className="absolute left-0 top-full mt-1 z-50 bg-black/90 border border-white/20 rounded px-2 py-1 text-xs text-white/80 max-w-xs break-words">
+                    {annotationText || (hasConflict ? 'Potential conflict in migration' : 'Data loss risk - review carefully')}
+                  </div>
+                )}
               </div>
             )
           })}
