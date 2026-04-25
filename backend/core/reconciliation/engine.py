@@ -15,7 +15,9 @@ from backend.core.reconciliation.scorer import (
 )
 from backend.core.reconciliation.assignment import hungarian_assignment
 from backend.core.conflicts.detector import detect_conflicts
-from backend.core.codegen.generator import generate_migration_sql
+from backend.core.codegen.generator import (
+    generate_migration_sql, generate_alter_table_migration, generate_rollback_sql
+)
 
 
 class ReconciliationEngine:
@@ -126,7 +128,9 @@ class ReconciliationEngine:
 
         _progress(0.90, "generating migration SQL")
         result.migration_sql = generate_migration_sql(result, source, target)
-        
+        result.migration_alter_sql = generate_alter_table_migration(result, source, target)
+        result.rollback_sql = generate_rollback_sql(result, source, target)
+
         elapsed = time.time() - start_time
         result.elapsed_seconds = round(elapsed, 3)
         return result

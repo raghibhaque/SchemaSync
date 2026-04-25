@@ -39,3 +39,59 @@ async def export_demo_sql():
         media_type="text/sql",
         headers={"Content-Disposition": "attachment; filename=migration_ghost_to_wordpress.sql"},
     )
+
+
+@router.post("/alter", response_model=ExportResponse)
+async def export_alter_migration_sql(req: ReconcileRequest):
+    source_schema = parser.parse(req.source_sql, schema_name=req.source_name)
+    target_schema = parser.parse(req.target_sql, schema_name=req.target_name)
+    result = engine.reconcile(source_schema, target_schema)
+
+    return ExportResponse(
+        sql=result.migration_alter_sql or "-- No ALTER TABLE migration generated",
+        filename=f"migration_alter_{req.source_name}_to_{req.target_name}.sql",
+    )
+
+
+@router.get("/demo/alter")
+async def export_demo_alter_sql():
+    ghost_sql = (DEMO_DIR / "ghost_schema.sql").read_text()
+    wp_sql = (DEMO_DIR / "wordpress_schema.sql").read_text()
+
+    source = parser.parse(ghost_sql, schema_name="ghost")
+    target = parser.parse(wp_sql, schema_name="wordpress")
+    result = engine.reconcile(source, target)
+
+    return PlainTextResponse(
+        content=result.migration_alter_sql or "-- No ALTER TABLE migration generated",
+        media_type="text/sql",
+        headers={"Content-Disposition": "attachment; filename=migration_alter_ghost_to_wordpress.sql"},
+    )
+
+
+@router.post("/rollback", response_model=ExportResponse)
+async def export_rollback_sql(req: ReconcileRequest):
+    source_schema = parser.parse(req.source_sql, schema_name=req.source_name)
+    target_schema = parser.parse(req.target_sql, schema_name=req.target_name)
+    result = engine.reconcile(source_schema, target_schema)
+
+    return ExportResponse(
+        sql=result.rollback_sql or "-- No rollback generated",
+        filename=f"rollback_{req.target_name}_to_{req.source_name}.sql",
+    )
+
+
+@router.get("/demo/rollback")
+async def export_demo_rollback_sql():
+    ghost_sql = (DEMO_DIR / "ghost_schema.sql").read_text()
+    wp_sql = (DEMO_DIR / "wordpress_schema.sql").read_text()
+
+    source = parser.parse(ghost_sql, schema_name="ghost")
+    target = parser.parse(wp_sql, schema_name="wordpress")
+    result = engine.reconcile(source, target)
+
+    return PlainTextResponse(
+        content=result.rollback_sql or "-- No rollback generated",
+        media_type="text/sql",
+        headers={"Content-Disposition": "attachment; filename=rollback_wordpress_to_ghost.sql"},
+    )
