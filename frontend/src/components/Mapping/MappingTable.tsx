@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useTheme } from '../../hooks/useTheme'
 import { useTemplates } from '../../hooks/useTemplates'
+import { useHistory } from '../../hooks/useHistory'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import { ConfidenceTooltip } from '../shared/ConfidenceTooltip'
 import ColumnDetailsDrawer from './ColumnDetailsDrawer'
@@ -14,6 +15,7 @@ import ConfidenceFilterSlider from './ConfidenceFilterSlider'
 import BulkActionBar from './BulkActionBar'
 import MappingDiffView from './MappingDiffView'
 import TemplateManager from './TemplateManager'
+import HistoryPanel from './HistoryPanel'
 
 interface Props {
   result: ReconciliationResult
@@ -30,6 +32,7 @@ export default function MappingTable({ result }: Props) {
   const [minConfidence, setMinConfidence] = useState(0)
   const [selectedForBulk, setSelectedForBulk] = useState<Set<number>>(new Set())
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const rowsRef = useRef<Map<number, HTMLDivElement>>(new Map())
@@ -41,16 +44,29 @@ export default function MappingTable({ result }: Props) {
   }, [result.summary])
 
   const { templates, saveTemplate: saveTemplateToStorage, deleteTemplate: deleteTemplateFromStorage } = useTemplates(schemaHash)
+  const { history, addEntry: addHistoryEntry, clearHistory } = useHistory(schemaHash)
 
   const handleSaveTemplate = (name: string) => {
     const reviewedIndices = Array.from(reviewed)
     const expandedIndices = Array.from(expanded)
     saveTemplateToStorage(name, reviewedIndices, expandedIndices)
+    addHistoryEntry({
+      actionType: 'template_loaded',
+      mappingId: 'template',
+      tableName: name,
+      description: `Template "${name}" saved with ${reviewedIndices.length} reviewed mappings`,
+    })
   }
 
   const handleLoadTemplate = (template: { reviewedIndices: number[]; expandedIndices: number[] }) => {
     setReviewed(new Set(template.reviewedIndices))
     setExpanded(new Set(template.expandedIndices))
+    addHistoryEntry({
+      actionType: 'template_loaded',
+      mappingId: 'template',
+      tableName: 'Template',
+      description: `Loaded template with ${template.reviewedIndices.length} reviewed mappings`,
+    })
   }
 
   const handleDeleteTemplate = (templateId: string) => {
@@ -165,8 +181,20 @@ export default function MappingTable({ result }: Props) {
 
   const toggleReviewed = (i: number) => {
     const s = new Set(reviewed)
-    s.has(i) ? s.delete(i) : s.add(i)
+    const wasReviewed = s.has(i)
+    wasReviewed ? s.delete(i) : s.add(i)
     setReviewed(s)
+
+    if (i < filtered.length) {
+      const mapping = filtered[i]
+      const newStatus = !wasReviewed
+      addHistoryEntry({
+        actionType: newStatus ? 'reviewed' : 'unreviewed',
+        mappingId: `${mapping.table_a.name}_${mapping.table_b.name}`,
+        tableName: `${mapping.table_a.name} → ${mapping.table_b.name}`,
+        description: newStatus ? 'Marked as reviewed' : 'Marked as unreviewed',
+      })
+    }
   }
 
   const {
@@ -221,7 +249,7 @@ export default function MappingTable({ result }: Props) {
           onClearSelection={() => setSelectedForBulk(new Set())}
           isDark={isDark}
         />
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
           <TemplateManager
             templates={templates}
             onSave={handleSaveTemplate}
@@ -229,6 +257,21 @@ export default function MappingTable({ result }: Props) {
             onDelete={handleDeleteTemplate}
             isDark={isDark}
           />
+          <motion.button
+            onClick={() => setShowHistory(!showHistory)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`group relative overflow-hidden rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+              isDark
+                ? 'border-white/[0.1] bg-white/[0.05] text-white/60 hover:border-white/[0.15] hover:bg-white/[0.08] hover:text-white/80'
+                : 'border-slate-300 bg-slate-100 text-slate-600 hover:border-slate-400 hover:bg-slate-200 hover:text-slate-800'
+            }`}
+            title="Show/hide history"
+          >
+            <span className="relative flex items-center gap-1.5">
+              📋 History {history.length > 0 && `(${history.length})`}
+            </span>
+          </motion.button>
         </div>
       </div>
 
@@ -301,6 +344,23 @@ export default function MappingTable({ result }: Props) {
         filteredCount={filtered.length}
         isDark={isDark}
       />
+
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <HistoryPanel
+              history={history}
+              onClearHistory={clearHistory}
+              isDark={isDark}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className={`rounded-xl border p-4 ${
         isDark
