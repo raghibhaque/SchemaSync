@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, HelpCircle, Info, AlertCircle, CheckCircle } from 'lucide-react'
+import { X, HelpCircle, Info, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -130,16 +130,7 @@ interface Props {
   onClose: () => void
 }
 
-const TrendingUp = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-  </svg>
-)
+
 
 export default function StatisticsGuide({ isOpen, onClose }: Props) {
   const [selectedTopic, setSelectedTopic] = useState<number>(0)

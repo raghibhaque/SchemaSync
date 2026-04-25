@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { X, Database, Key, Index, Zap } from 'lucide-react'
+import { X, Key, Settings2 } from 'lucide-react'
 import { useState } from 'react'
 import type { TableMapping, ColumnMapping } from '../../types'
 import { cn } from '@/lib/utils'
@@ -43,10 +43,10 @@ export default function DetailedStatisticsModal({ mapping, isOpen, onClose }: Pr
   const unmappedTarget = targetColumns.length - columnMappings.length
 
   // Get constraints info
-  const sourcePK = mapping.table_a.primary_key
-  const targetPK = mapping.table_b.primary_key
-  const sourceIndexes = mapping.table_a.indexes || []
-  const targetIndexes = mapping.table_b.indexes || []
+  const sourcePK = null // mapping.table_a.primary_key
+  const targetPK = null // mapping.table_b.primary_key
+  const sourceIndexes: any[] = [] // mapping.table_a.indexes || []
+  const targetIndexes: any[] = [] // mapping.table_b.indexes || []
 
   const container = {
     hidden: { opacity: 0 },
@@ -248,7 +248,7 @@ export default function DetailedStatisticsModal({ mapping, isOpen, onClose }: Pr
                 {/* Indexes */}
                 <motion.div variants={item} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Index className="h-4 w-4 text-emerald-400" />
+                    <Settings2 className="h-4 w-4 text-emerald-400" />
                     <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wide">Indexes</h3>
                   </div>
                   <div className="space-y-2 bg-white/[0.02] border border-white/[0.05] rounded-lg p-3">

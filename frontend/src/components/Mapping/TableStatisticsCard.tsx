@@ -54,7 +54,7 @@ export default function TableStatisticsCard({ stats, isExpanded = false, mapping
               </div>
             )}
 
-            {stats.sourceTable.indexes > 0 && (
+            {stats.sourceTable.indexes && stats.sourceTable.indexes > 0 && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-white/60">Indexes:</span>
                 <span className="font-semibold text-cyan-300">{stats.sourceTable.indexes}</span>
@@ -87,7 +87,7 @@ export default function TableStatisticsCard({ stats, isExpanded = false, mapping
               </div>
             )}
 
-            {stats.targetTable.indexes > 0 && (
+            {stats.targetTable.indexes && stats.targetTable.indexes > 0 && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-white/60">Indexes:</span>
                 <span className="font-semibold text-cyan-300">{stats.targetTable.indexes}</span>

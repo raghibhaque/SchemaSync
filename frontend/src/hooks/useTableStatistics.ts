@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { ReconciliationResult, TableMapping } from '../../types'
+import type { ReconciliationResult, TableMapping } from '../types'
 
 export interface TableStats {
   name: string

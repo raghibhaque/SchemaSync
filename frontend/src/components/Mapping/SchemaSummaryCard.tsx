@@ -25,8 +25,8 @@ export default function SchemaSummaryCard({ result }: Props) {
     return sum + conflicts
   }, 0)
 
-  const totalIndexes = result.table_mappings.reduce((sum, m) => sum + (m.table_a.indexes?.length || 0), 0)
-  const totalPrimaryKeys = result.table_mappings.filter(m => m.table_a.primary_key).length
+  const totalIndexes = 0 // result.table_mappings.reduce((sum, m) => sum + (m.table_a.indexes?.length || 0), 0)
+  const totalPrimaryKeys = 0 // result.table_mappings.filter(m => m.table_a.primary_key).length
 
   const averageColumnDifference = Math.round((Math.abs(totalSourceColumns - totalTargetColumns) / result.table_mappings.length) * 10) / 10
 

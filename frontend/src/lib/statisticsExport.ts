@@ -72,8 +72,8 @@ export function generateStatisticsExport(result: ReconciliationResult, schemaNam
       unmappedTargetColumns,
       typeConflicts,
       confidence: mapping.confidence,
-      primaryKey: mapping.table_a.primary_key || null,
-      indexes: mapping.table_a.indexes?.length || 0,
+      primaryKey: null, // mapping.table_a.primary_key || null,
+      indexes: 0, // mapping.table_a.indexes?.length || 0,
     }
   })
 
