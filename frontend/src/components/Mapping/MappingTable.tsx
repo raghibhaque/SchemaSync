@@ -11,6 +11,7 @@ import { useFilterPresets } from '../../hooks/useFilterPresets'
 import { useCustomRules } from '../../hooks/useCustomRules'
 import { useProgressMetrics } from '../../hooks/useProgressMetrics'
 import { useConflictResolutions } from '../../hooks/useConflictResolutions'
+import { useTableStatistics } from '../../hooks/useTableStatistics'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import ProgressDashboard from './ProgressDashboard'
 import PerformanceMetrics from './PerformanceMetrics'
@@ -25,6 +26,7 @@ import MappingDiffView from './MappingDiffView'
 import TemplateManager from './TemplateManager'
 import HistoryPanel from './HistoryPanel'
 import ExportDrawer from './ExportDrawer'
+import TableStatisticsCard from './TableStatisticsCard'
 
 interface Props {
   result: ReconciliationResult
@@ -47,6 +49,9 @@ export default function MappingTable({ result }: Props) {
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const rowsRef = useRef<Map<number, HTMLDivElement>>(new Map())
+
+  // Get table statistics
+  const tableStats = useTableStatistics(result)
 
   // Create a hash for the current schema to use as a template namespace
   const schemaHash = useMemo(() => {
@@ -627,7 +632,7 @@ export default function MappingTable({ result }: Props) {
                         }}
                         isFocused={focusedIndex === i}
                         onFocus={() => setFocusedIndex(i)}
-                        
+                        stats={tableStats[i]}
                       />
                     </div>
                   )
@@ -663,7 +668,7 @@ export default function MappingTable({ result }: Props) {
                   }}
                   isFocused={focusedIndex === i}
                   onFocus={() => setFocusedIndex(i)}
-                  
+                  stats={tableStats[i]}
                 />
               </div>
             ))
@@ -719,6 +724,7 @@ function Row({
   onBulkToggle,
   isFocused = false,
   onFocus,
+  stats,
 }: {
   mapping: TableMapping
   index: number
@@ -734,22 +740,9 @@ function Row({
   onBulkToggle?: () => void
   isFocused?: boolean
   onFocus?: () => void
+  stats?: any
 }) {
-  const sourceTypes = Array.from(
-    new Set(
-      mapping.table_a.columns
-        .map((c) => c.data_type?.base_type)
-        .filter(Boolean)
-    )
-  ).join(', ')
-
-  const targetTypes = Array.from(
-    new Set(
-      mapping.table_b.columns
-        .map((c) => c.data_type?.base_type)
-        .filter(Boolean)
-    )
-  ).join(', ')
+  // Component body starts here
 
   return (
     <div className={cn(
@@ -894,43 +887,11 @@ function Row({
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.05] bg-gradient-to-b from-white/[0.03] to-white/[0.01] px-4 sm:px-5 pb-3 sm:pb-4 pt-3">
-              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3">
-                <div>
-                  <p className="text-xs font-semibold text-white/40 mb-1">Source Stats</p>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-white/30">Columns:</span>
-                      <span className="font-mono text-xs text-white/70 font-semibold">
-                        {mapping.table_a.columns.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-white/30">Types:</span>
-                      <span className="font-mono text-xs text-white/60 truncate text-right">
-                        {sourceTypes || 'unknown'}
-                      </span>
-                    </div>
-                  </div>
+              {stats && (
+                <div className="mb-4">
+                  <TableStatisticsCard stats={stats} isExpanded={isExpanded} />
                 </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-white/40 mb-1">Target Stats</p>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-white/30">Columns:</span>
-                      <span className="font-mono text-xs text-white/70 font-semibold">
-                        {mapping.table_b.columns.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-white/30">Types:</span>
-                      <span className="font-mono text-xs text-white/60 truncate text-right">
-                        {targetTypes || 'unknown'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
 
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/25">
                 Column mappings · {(mapping.column_mappings ?? []).length}
