@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronRight, AlertTriangle, Eye } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { TableMapping, ColumnMapping } from '../../types'
-import { cn } from '@/lib/utils'
 import { useTheme } from '../../hooks/useTheme'
+import { useConflictResolutions } from '../../hooks/useConflictResolutions'
 import ConfidenceBadge from '../shared/ConfidenceBadge'
 import UnmatchedColumnsPanel from './UnmatchedColumnsPanel'
 import DataPreviewDrawer from './DataPreviewDrawer'
+import ConflictResolutionPanel from './ConflictResolutionPanel'
 
 interface Props {
   mapping: TableMapping | null
@@ -18,6 +19,14 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const [previewMapping, setPreviewMapping] = useState<ColumnMapping | null>(null)
+
+  // Create a session key for conflict resolutions
+  const sessionKey = useMemo(() => {
+    if (!mapping) return 'default'
+    return `conflicts:${mapping.table_a.name}:${mapping.table_b.name}`
+  }, [mapping])
+
+  const { markResolved, markNeedsReview, clearResolution, getResolution } = useConflictResolutions(sessionKey)
 
   if (!mapping) return null
 
@@ -180,44 +189,29 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
 
                     {/* Conflicts */}
                     {col.conflicts.length > 0 && (
-                      <div className={`mt-3 pt-3 border-t ${
-                        isDark ? 'border-white/[0.05]' : 'border-slate-300'
-                      }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <AlertTriangle className={`h-3.5 w-3.5 ${
-                            isDark ? 'text-amber-400' : 'text-amber-600'
-                          }`} />
-                          <span className={`text-xs font-medium ${
-                            isDark ? 'text-white/60' : 'text-slate-700'
-                          }`}>
+                      <div className={`mt-3 pt-3 border-t border-white/[0.05]`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                          <span className="text-xs font-medium text-white/60">
                             {col.conflicts.length} conflict{col.conflicts.length !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        <div className="space-y-1.5">
-                          {col.conflicts.map((conflict: any, ci) => (
-                            <div
-                              key={ci}
-                              className={cn(
-                                'text-xs p-2 rounded border',
-                                isDark
-                                  ? conflict.severity === 'error'
-                                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-300/80'
-                                    : conflict.severity === 'warning'
-                                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-300/80'
-                                      : 'bg-blue-500/10 border-blue-500/20 text-blue-300/80'
-                                  : conflict.severity === 'error'
-                                    ? 'bg-rose-100 border-rose-300 text-rose-700'
-                                    : conflict.severity === 'warning'
-                                      ? 'bg-amber-100 border-amber-300 text-amber-700'
-                                      : 'bg-blue-100 border-blue-300 text-blue-700'
-                              )}
-                            >
-                              <p className="font-medium">{conflict.message}</p>
-                              {conflict.details && (
-                                <p className="mt-1 text-[11px] opacity-75">{conflict.details}</p>
-                              )}
-                            </div>
-                          ))}
+                        <div className="space-y-2.5">
+                          {col.conflicts.map((conflict: any, ci) => {
+                            const conflictId = `${mapping?.table_a.name}:${mapping?.table_b.name}:${col.col_a.name}:${ci}`
+                            const resolution = getResolution(conflictId)
+                            return (
+                              <ConflictResolutionPanel
+                                key={ci}
+                                conflictId={conflictId}
+                                conflict={conflict}
+                                resolution={resolution}
+                                onMarkResolved={(notes, fix) => markResolved(conflictId, notes, fix)}
+                                onMarkNeedsReview={(notes) => markNeedsReview(conflictId, notes)}
+                                onClear={() => clearResolution(conflictId)}
+                              />
+                            )
+                          })}
                         </div>
                       </div>
                     )}
