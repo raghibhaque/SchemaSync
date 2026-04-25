@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, Check, Download, Terminal, ChevronDown } from 'lucide-react'
 import type { ReconciliationResult } from '../../types'
+import { showToast } from '../../lib/toast'
 import { cn } from '@/lib/utils'
 
 interface Props { result: ReconciliationResult }
@@ -62,17 +63,27 @@ export default function MigrationScaffold({ result }: Props) {
   const sizeLabel = byteSize < 1024 ? `${byteSize} B` : `${(byteSize / 1024).toFixed(1)} KB`
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code).catch(() => null)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      showToast(`${format.toUpperCase()} code copied to clipboard`, 'success')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      showToast('Failed to copy code', 'error')
+    }
   }
 
   const handleDownload = () => {
-    const a = document.createElement('a')
-    const mimeTypes = { sql: 'text/plain', json: 'application/json', python: 'text/plain' }
-    a.href = URL.createObjectURL(new Blob([code], { type: mimeTypes[format] }))
-    a.download = `migration.${format}`
-    a.click()
+    try {
+      const a = document.createElement('a')
+      const mimeTypes = { sql: 'text/plain', json: 'application/json', python: 'text/plain' }
+      a.href = URL.createObjectURL(new Blob([code], { type: mimeTypes[format] }))
+      a.download = `migration.${format}`
+      a.click()
+      showToast(`migration.${format} downloaded`, 'success')
+    } catch {
+      showToast('Failed to download file', 'error')
+    }
   }
 
   return (
