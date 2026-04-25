@@ -106,3 +106,55 @@ async def reconcile_files(source_file: str, target_file: str):
             status="error",
             error=str(e),
         )
+@router.post("/demo/stats")
+async def reconcile_demo_stats(req: DemoRequest = DemoRequest()):
+    try:
+        ghost_path = DEMO_DIR / "ghost_schema.sql"
+        wp_path = DEMO_DIR / "wordpress_schema.sql"
+
+        source_sql = ghost_path.read_text()
+        target_sql = wp_path.read_text()
+
+        source_schema = parser.parse(source_sql, schema_name=req.source_name)
+        target_schema = parser.parse(target_sql, schema_name=req.target_name)
+
+        result = engine.reconcile(source_schema, target_schema)
+
+        high_confidence = [tm for tm in result.table_mappings if tm.combined_score >= 0.8]
+        medium_confidence = [tm for tm in result.table_mappings if 0.5 <= tm.combined_score < 0.8]
+        low_confidence = [tm for tm in result.table_mappings if tm.combined_score < 0.5]
+
+        type_conflicts = [c for c in result.conflicts if c.conflict_type == "type_mismatch"]
+        nullable_conflicts = [c for c in result.conflicts if c.conflict_type == "nullable_mismatch"]
+        length_conflicts = [c for c in result.conflicts if c.conflict_type == "length_mismatch"]
+
+        return {
+            "status": "complete",
+            "elapsed_seconds": result.elapsed_seconds,
+            "source": source_schema.to_dict(),
+            "target": target_schema.to_dict(),
+            "summary": result.summary,
+            "confidence_breakdown": {
+                "high": len(high_confidence),
+                "medium": len(medium_confidence),
+                "low": len(low_confidence),
+            },
+            "conflict_breakdown": {
+                "type_mismatch": len(type_conflicts),
+                "nullable_mismatch": len(nullable_conflicts),
+                "length_mismatch": len(length_conflicts),
+                "other": len(result.conflicts) - len(type_conflicts) - len(nullable_conflicts) - len(length_conflicts),
+            },
+            "source_stats": {
+                "tables": len(source_schema.tables),
+                "total_columns": sum(len(t.columns) for t in source_schema.tables),
+                "total_foreign_keys": sum(len(t.foreign_keys) for t in source_schema.tables),
+            },
+            "target_stats": {
+                "tables": len(target_schema.tables),
+                "total_columns": sum(len(t.columns) for t in target_schema.tables),
+                "total_foreign_keys": sum(len(t.foreign_keys) for t in target_schema.tables),
+            },
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
