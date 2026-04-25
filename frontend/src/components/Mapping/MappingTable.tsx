@@ -32,6 +32,8 @@ import HistoryPanel from './HistoryPanel'
 import ExportDrawer from './ExportDrawer'
 import UndoRedoBar from './UndoRedoBar'
 import BatchConflictResolutionPanel from './BatchConflictResolutionPanel'
+import AdvancedFilterBuilder, { type AdvancedFilterCriteria } from './AdvancedFilterBuilder'
+import AutoDiscoveryDashboard from './AutoDiscoveryDashboard'
 import TableStatisticsCard from './TableStatisticsCard'
 import SchemaSummaryCard from './SchemaSummaryCard'
 import StatisticsExportPanel from './StatisticsExportPanel'
@@ -63,6 +65,8 @@ export default function MappingTable({ result }: Props) {
   const [showRules, setShowRules] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showConflictResolution, setShowConflictResolution] = useState(false)
+  const [showAutoDiscovery, setShowAutoDiscovery] = useState(true)
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterCriteria[]>([])
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingMappingIndex, setEditingMappingIndex] = useState<number | null>(null)
@@ -425,6 +429,24 @@ export default function MappingTable({ result }: Props) {
 
       {/* Review Progress Section */}
       <ReviewProgressBar stats={reviewStats} />
+
+      {/* Auto-Discovery Dashboard */}
+      {showAutoDiscovery && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+        >
+          <AutoDiscoveryDashboard
+            result={result}
+            reviewedCount={reviewed.size}
+            conflictCount={conflictStats.total}
+            onApplyQuickFilter={(filterId) => {
+              setShowAutoDiscovery(false)
+            }}
+          />
+        </motion.div>
+      )}
 
       {/* Review Toolbar */}
       <motion.div
@@ -794,7 +816,21 @@ export default function MappingTable({ result }: Props) {
         onChange={setMinConfidence}
         mappingsCount={result.table_mappings?.length ?? 0}
         filteredCount={filtered.length}
-        
+
+      />
+
+      {/* Advanced Filter Builder */}
+      <AdvancedFilterBuilder
+        filters={advancedFilters}
+        onFiltersChange={setAdvancedFilters}
+        onApply={() => {
+          addHistoryEntry({
+            actionType: 'template_loaded',
+            mappingId: 'advanced-filter',
+            tableName: 'Advanced Filter',
+            description: `Applied advanced filter with ${advancedFilters.length} criteria`,
+          })
+        }}
       />
 
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
