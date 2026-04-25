@@ -38,6 +38,9 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
 
           {/* Drawer */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="column-details-title"
             initial={{ x: '100%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
@@ -55,7 +58,7 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
                 : 'border-slate-200 bg-slate-50/80'
             }`}>
               <div>
-                <h2 className={`text-lg font-semibold ${
+                <h2 id="column-details-title" className={`text-lg font-semibold ${
                   isDark ? 'text-white/80' : 'text-slate-900'
                 }`}>Column Mappings</h2>
                 <p className={`mt-1 text-xs ${
@@ -65,12 +68,14 @@ export default function ColumnDetailsDrawer({ mapping, onClose, onSuggestionAcce
                 </p>
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className={`transition-colors p-1 ${
+                className={`transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   isDark
                     ? 'text-white/40 hover:text-white/60'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
+                aria-label="Close column details drawer"
               >
                 <X className="h-5 w-5" />
               </button>
