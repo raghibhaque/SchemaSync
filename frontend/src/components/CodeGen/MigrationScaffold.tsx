@@ -150,30 +150,52 @@ export default function MigrationScaffold({ result }: Props) {
       </div>
 
       {/* Code block */}
-      <div className="overflow-hidden rounded-xl border border-white/[0.07]">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="overflow-hidden rounded-xl border border-white/[0.1] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+      >
         {/* Traffic-light bar */}
-        <div className="flex items-center gap-1.5 border-b border-white/[0.06] bg-white/[0.03] px-4 py-2.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-          <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-          <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-          <span className="ml-2 text-[11px] text-white/20">SQL</span>
+        <div className="flex items-center gap-1.5 border-b border-white/[0.06] bg-gradient-to-r from-white/[0.04] to-white/[0.02] px-4 py-3">
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0 }}
+            className="h-2.5 w-2.5 rounded-full bg-rose-400/60"
+          />
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
+            className="h-2.5 w-2.5 rounded-full bg-amber-400/60"
+          />
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
+            className="h-2.5 w-2.5 rounded-full bg-emerald-400/60"
+          />
+          <span className="ml-3 text-[11px] font-medium text-white/40 uppercase tracking-wider">{format}</span>
         </div>
 
-        <div className="max-h-[520px] overflow-auto bg-[#080810]">
-          <pre className="p-5 text-[0.8125rem] leading-relaxed">
+        <div className="max-h-[520px] overflow-auto bg-gradient-to-b from-[#0a0a14] to-[#06060e] custom-scrollbar">
+          <pre className="p-5 text-[0.8125rem] leading-relaxed font-mono">
             <code>
               {lines.map((line, i) => (
-                <div key={i} className="flex">
-                  <span className="mr-5 w-8 shrink-0 select-none text-right text-white/[0.15] tabular-nums">
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: Math.min(i * 0.01, 0.3), duration: 0.3 }}
+                  className="flex hover:bg-white/[0.04] transition-colors"
+                >
+                  <span className="mr-4 w-8 shrink-0 select-none text-right text-white/[0.2] tabular-nums font-semibold">
                     {i + 1}
                   </span>
-                  {format === 'sql' ? <SqlLine line={line} /> : <span className="text-white/55">{line}</span>}
-                </div>
+                  {format === 'sql' ? <SqlLine line={line} /> : <span className="text-white/60">{line}</span>}
+                </motion.div>
               ))}
             </code>
           </pre>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tip */}
       <p className="text-xs text-white/20 leading-relaxed">
@@ -185,7 +207,7 @@ export default function MigrationScaffold({ result }: Props) {
 
 function SqlLine({ line }: { line: string }) {
   if (line.startsWith('--')) {
-    return <span className="text-white/25">{line}</span>
+    return <span className="text-white/[0.35] italic">{line}</span>
   }
   const keywords = /\b(BEGIN|COMMIT|CREATE|TABLE|IF|NOT|EXISTS|INSERT|INTO|SELECT|FROM|CAST|AS|NULL|DEFAULT|PRIMARY|KEY|INDEX|UNIQUE|ON|REFERENCES|WHERE|AND|OR|SET)\b/g
 
@@ -203,9 +225,9 @@ function SqlLine({ line }: { line: string }) {
     <span>
       {parts.map((p, i) =>
         p.isKw ? (
-          <span key={i} className="text-indigo-300/70 font-medium">{p.text}</span>
+          <span key={i} className="text-cyan-300/80 font-semibold">{p.text}</span>
         ) : (
-          <span key={i} className="text-white/55">{p.text}</span>
+          <span key={i} className="text-white/60">{p.text}</span>
         )
       )}
     </span>
@@ -214,16 +236,24 @@ function SqlLine({ line }: { line: string }) {
 
 function IconButton({ children, onClick, title }: { children: React.ReactNode; onClick: () => void; title: string }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       title={title}
+      whileHover={{ scale: 1.05, y: -1 }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.04]',
-        'px-3 py-1.5 text-xs font-medium text-white/40',
-        'transition-all hover:border-white/[0.12] hover:bg-white/[0.07] hover:text-white/70'
+        'relative overflow-hidden flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-gradient-to-br from-white/[0.08] to-white/[0.02]',
+        'px-3 py-1.5 text-xs font-semibold text-white/60',
+        'transition-all hover:border-white/[0.18] hover:bg-gradient-to-br hover:from-white/[0.12] hover:to-white/[0.04] hover:text-white/90',
+        'shadow-[0_4px_16px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)]'
       )}
     >
-      {children}
-    </button>
+      <motion.span
+        whileHover={{ scale: 1.1 }}
+        className="flex items-center"
+      >
+        {children}
+      </motion.span>
+    </motion.button>
   )
 }
