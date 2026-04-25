@@ -3,29 +3,16 @@ import { useState, useEffect } from 'react'
 type Theme = 'light' | 'dark'
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>('dark')
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [theme] = useState<Theme>('dark')
+  const isLoaded = true
 
   useEffect(() => {
-    // Check localStorage first
-    const stored = localStorage.getItem('theme') as Theme | null
-
-    if (stored) {
-      setThemeState(stored)
-      applyTheme(stored)
-    } else {
-      // Default to dark mode, can be toggled by user
-      setThemeState('dark')
-      applyTheme('dark')
-    }
-
-    setIsLoaded(true)
+    // Always use dark mode - no other themes supported
+    applyTheme('dark')
   }, [])
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
-    applyTheme(newTheme)
+  const setTheme = (_newTheme?: Theme) => {
+    // No-op: theme is always dark
   }
 
   return { theme, setTheme, isLoaded }
