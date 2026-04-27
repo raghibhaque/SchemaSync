@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 import { commentStore, type CommentTarget } from '../lib/comments'
+import { commentNotificationIntegration } from '../lib/commentNotifications'
 
 export function useComments(target_type: CommentTarget, target_id: string) {
   const [, setRefresh] = useState(0)
@@ -19,7 +20,8 @@ export function useComments(target_type: CommentTarget, target_id: string) {
 
   const addComment = useCallback(
     (content: string) => {
-      commentStore.addComment(target_type, target_id, currentUser, content)
+      const comment = commentStore.addComment(target_type, target_id, currentUser, content)
+      commentNotificationIntegration.notifyCommentAdded(comment)
       refresh()
     },
     [target_type, target_id, currentUser, refresh]
@@ -27,7 +29,14 @@ export function useComments(target_type: CommentTarget, target_id: string) {
 
   const addReply = useCallback(
     (parentId: string, content: string) => {
-      commentStore.addReply(target_type, target_id, parentId, currentUser, content)
+      const reply = commentStore.addReply(target_type, target_id, parentId, currentUser, content)
+      const parentComment = Array.from(commentStore.getComments(target_type, target_id))
+        .flatMap(thread => [thread.root, ...thread.replies])
+        .find(c => c.id === parentId)
+
+      if (parentComment) {
+        commentNotificationIntegration.notifyReplyAdded(reply, parentComment)
+      }
       refresh()
     },
     [target_type, target_id, currentUser, refresh]
@@ -36,14 +45,24 @@ export function useComments(target_type: CommentTarget, target_id: string) {
   const resolveComment = useCallback(
     (commentId: string) => {
       commentStore.resolveComment(commentId)
+      const allComments = Array.from(commentStore.getComments(target_type, target_id))
+        .flatMap(thread => [thread.root, ...thread.replies])
+      const resolvedComment = allComments.find(c => c.id === commentId)
+
+      if (resolvedComment) {
+        commentNotificationIntegration.notifyCommentResolved(resolvedComment, currentUser)
+      }
       refresh()
     },
-    [refresh]
+    [target_type, target_id, currentUser, refresh]
   )
 
   const addReaction = useCallback(
     (commentId: string, emoji: string) => {
-      commentStore.addReaction(commentId, emoji, currentUser)
+      const result = commentStore.addReaction(commentId, emoji, currentUser)
+      if (result) {
+        commentNotificationIntegration.notifyReactionAdded(result, emoji, currentUser)
+      }
       refresh()
     },
     [currentUser, refresh]
