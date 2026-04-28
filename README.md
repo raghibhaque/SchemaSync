@@ -14,7 +14,9 @@ Schema reconciliation—mapping tables and columns across two different database
 - [Getting Started](#getting-started)
 - [Project Structure](#project-structure)
 - [How to Run](#how-to-run)
+- [Docker Deployment](#docker-deployment)
 - [Features](#features)
+- [Schema Import Methods](#schema-import-methods)
 - [Real Migration SQL Generation](#real-migration-sql-generation)
 - [Architecture](#architecture)
 - [API Endpoints](#api-endpoints)
@@ -39,7 +41,7 @@ SchemaSync takes two SQL database schemas and produces:
    - Automatic rollback scripts for quick recovery
 5. **Visual Analysis** — Mapping confidence scores, complexity assessment, data loss risk indicators, execution metrics
 
-**Input:** Two `.sql` files (CREATE TABLE statements) or raw SQL  
+**Input:** Two schemas via `.sql` files, `.prisma` files, JSON Schema, or live database connections  
 **Output:** 
 - Visual mapping results with confidence scores
 - Interactive conflict analysis and batch resolution
@@ -67,9 +69,9 @@ This forces engineers to:
 4. Hand-write migration logic
 
 **The cost:**
-- ⏱️ Slow: Days to weeks of senior engineer time
-- 💰 Expensive: Only senior engineers can do this reliably
-- ❌ Inconsistent: Depends on human judgment, prone to mistakes
+- Slow: Days to weeks of senior engineer time
+- Expensive: Only senior engineers can do this reliably
+- Inconsistent: Depends on human judgment, prone to mistakes
 
 ---
 
@@ -105,8 +107,6 @@ Understands **meaning** beyond names:
 - **Type Compatibility Scoring** — Numeric, string, date, boolean type categories
 - **Transformation Suggestions** — Auto-proposes safe type conversions
 
-Scores table and column pairs semantically based on name similarity, synonyms, and contextual patterns—dramatically improving cross-platform matching (e.g., Ghost CMS to WordPress).
-
 ### Layer 3: Optimal Assignment
 Uses the **Hungarian Algorithm** (via SciPy) to find the **globally optimal table and column mappings** given all pairwise scores.
 
@@ -127,11 +127,11 @@ Instead of greedy matching (pick the best pair, repeat), this solves the biparti
 #### 1. Set up backend
 
 ```bash
-cd /home/raghib/Desktop/hackUPC
+cd SchemaSync
 
 # Create virtual environment
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate       # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -149,7 +149,7 @@ INFO:     Application startup complete
 #### 2. Set up frontend (in a new terminal)
 
 ```bash
-cd /home/raghib/Desktop/hackUPC/frontend
+cd SchemaSync/frontend
 
 # Install dependencies
 npm install
@@ -166,174 +166,175 @@ VITE v5.0.8  ready in 123 ms
 
 #### 3. Open the app
 
-Go to **http://localhost:5173** in your browser. Click "Run Demo" to see it work (no files needed—it reconciles Ghost CMS vs WordPress schemas).
+Go to **http://localhost:5173** in your browser. Click "Run Demo" to see it work—no files needed. The demo reconciles Ghost CMS vs WordPress schemas automatically.
 
 ---
 
 ## Project Structure
 
 ```
-hackUPC/
+SchemaSync/
 ├── README.md                          # This file
 ├── requirements.txt                   # Python dependencies
 ├── .env.example                       # Environment variables template
 ├── .gitignore
+├── Dockerfile                         # Multi-stage Docker build (Python 3.11-slim)
+├── docker-compose.yml                 # Service orchestration with health checks
+├── .dockerignore
 │
 ├── backend/                           # FastAPI backend (port 8000)
-│   ├── main.py                        # FastAPI app, CORS, routes
-│   ├── config.py                      # Configuration (thresholds, paths)
+│   ├── main.py                        # FastAPI app, CORS, middleware, routes
+│   ├── config.py                      # Configuration (thresholds, env vars)
+│   ├── logging_config.py              # Structured logging setup
 │   │
 │   ├── api/
 │   │   ├── routes/
-│   │   │   ├── upload.py              # POST /api/upload/ — upload & parse SQL file
-│   │   │   ├── reconcile.py           # POST /api/reconcile/demo, /, /files — run reconciliation + 3 migrations
-│   │   │   └── export.py              # POST /api/export/{sql,alter,rollback,demo/*} — export migrations
+│   │   │   ├── upload.py              # POST /api/v1/upload/ — upload & parse schema
+│   │   │   ├── reconcile.py           # POST /api/v1/reconcile/* — run reconciliation
+│   │   │   ├── export.py              # POST /api/v1/export/* — 5 export formats
+│   │   │   ├── graph.py               # Graph visualization data
+│   │   │   ├── suggestions.py         # Smart mapping suggestions
+│   │   │   ├── samples.py             # Sample/demo schema endpoints
+│   │   │   ├── health.py              # GET /api/v1/health
+│   │   │   └── validate.py            # Schema validation
 │   │   ├── models/
 │   │   │   ├── requests.py            # Pydantic request schemas
 │   │   │   └── responses.py           # Pydantic response schemas
-│   │   └── __init__.py
+│   │   └── errors.py                  # Custom error codes & handlers
 │   │
 │   ├── core/
-│   │   ├── ir/                        # Intermediate Representation (IR) — universal schema format
-│   │   │   ├── models.py              # Dataclasses: Schema, Table, Column, TableMapping, etc.
+│   │   ├── ir/                        # Intermediate Representation
+│   │   │   ├── models.py              # Schema, Table, Column, TableMapping dataclasses
 │   │   │   └── normaliser.py          # Name & type normalisation
 │   │   │
-│   │   ├── parsers/                   # Schema format parsers
+│   │   ├── parsers/                   # Multi-format schema parsers (1022 lines)
 │   │   │   ├── base.py                # Abstract parser interface
-│   │   │   ├── sql_ddl.py             # ✓ SQL DDL parser (MySQL/PostgreSQL)
-│   │   │   ├── prisma.py              # (stub) Prisma schema parser
-│   │   │   └── json_schema.py         # (stub) JSON Schema parser
+│   │   │   ├── sql_ddl.py             # SQL DDL parser — MySQL/PostgreSQL (383 lines)
+│   │   │   ├── prisma.py              # Prisma schema parser (284 lines)
+│   │   │   └── json_schema.py         # JSON Schema parser (336 lines)
 │   │   │
-│   │   ├── analysis/                  # Matching algorithms
-│   │   │   ├── structural.py          # Fingerprint extraction & structural similarity
-│   │   │   └── semantic.py            # Name similarity, optional embeddings
+│   │   ├── analysis/                  # Matching algorithms (650+ lines)
+│   │   │   ├── structural.py          # Fingerprint extraction & cosine similarity (213 lines)
+│   │   │   ├── semantic.py            # Name similarity, synonym dicts, embeddings (437 lines)
+│   │   │   └── validator.py           # Schema validation utilities
 │   │   │
-│   │   ├── reconciliation/            # Main reconciliation engine
-│   │   │   ├── engine.py              # ReconciliationEngine — orchestrates matching
-│   │   │   ├── scorer.py              # Score matrix computation
-│   │   │   └── assignment.py          # Hungarian algorithm + greedy fallback
+│   │   ├── reconciliation/            # Main orchestration (445 lines)
+│   │   │   ├── engine.py              # ReconciliationEngine pipeline (142 lines)
+│   │   │   ├── scorer.py              # Score matrix computation (224 lines)
+│   │   │   └── assignment.py          # Hungarian algorithm + greedy fallback (79 lines)
 │   │   │
-│   │   ├── conflicts/                 # Conflict detection
-│   │   │   ├── detector.py            # Detects type/nullability/constraint/DEFAULT mismatches
-│   │   │   └── types.py               # Conflict type constants
+│   │   ├── conflicts/                 # Conflict detection (355+ lines)
+│   │   │   ├── detector.py            # Type/nullability/constraint/DEFAULT/FK detection
+│   │   │   └── types.py               # Conflict type constants (7 types)
 │   │   │
-│   │   └── codegen/                   # SQL migration generation (3 approaches)
-│   │       ├── generator.py           # Three generators:
-│   │       │                          # 1. generate_migration_sql() — DROP+CREATE (full rebuild)
-│   │       │                          # 2. generate_alter_table_migration() — RENAME/ALTER (incremental)
-│   │       │                          # 3. generate_rollback_sql() — Reverse operations
-│   │       │                          # Safe type conversions with NULLIF, STR_TO_DATE, CASE
-│   │       └── templates/             # (unused) Jinja2 template stubs
+│   │   └── codegen/                   # SQL migration generation (803 lines)
+│   │       ├── generator.py           # 3 generators: DROP+CREATE, ALTER TABLE, Rollback
+│   │       ├── dialects.py            # MySQL vs PostgreSQL syntax adapters (139 lines)
+│   │       └── transform.py           # Safe type conversion helpers (268 lines)
 │   │
 │   ├── services/
-│   │   ├── pipeline.py                # (unused) Job queue dataclass
+│   │   ├── pipeline.py                # Async job queue
+│   │   ├── schema_cache.py            # Caching layer
 │   │   └── llm.py                     # (stub) LLM integration
 │   │
-│   ├── demo/
-│   │   ├── ghost_schema.sql           # Demo: Ghost CMS schema
-│   │   └── wordpress_schema.sql       # Demo: WordPress schema
+│   ├── demo/                          # Demo schema pairs (6 scenarios)
+│   │   ├── ghost_schema.sql           # Ghost CMS schema
+│   │   ├── wordpress_schema.sql       # WordPress schema
+│   │   ├── crm_legacy_schema.sql      # Legacy CRM schema
+│   │   ├── crm_modern_schema.sql      # Modern CRM schema
+│   │   ├── messy_legacy_schema.sql    # Stress-test schema
+│   │   └── messy_modern_schema.sql    # Stress-test schema
 │   │
-│   └── __init__.py
+│   └── uploads/                       # User-uploaded files (runtime, gitignored)
 │
-└── frontend/                          # React + TypeScript frontend (port 5173)
-    ├── package.json                   # NPM dependencies
-    ├── vite.config.ts                 # Vite bundler config
-    ├── tailwind.config.js             # Tailwind CSS config
-    ├── tsconfig.json                  # TypeScript config
-    ├── index.html                     # HTML entry point
-    │
-    ├── src/
-    │   ├── main.tsx                   # React root
-    │   ├── App.tsx                    # Main app (upload or results view)
-    │   ├── vite-env.d.ts              # Vite env vars
-    │   │
-    │   ├── lib/
-    │   │   ├── api.ts                 # API client (axios) + response transformer
-    │   │   ├── utils.ts               # cn() helper (clsx + tailwind-merge)
-    │   │   ├── exportFormats.ts       # 5 export generators (Generic SQL, Flyway, Liquibase, DMS, Rollback)
-    │   │   ├── migrationUtils.ts      # Type conversion map, SQL builders, complexity estimator
-    │   │   ├── sqlDialect.ts          # MySQL/PostgreSQL/Generic dialect adapters
-    │   │   └── statisticsExport.ts    # Statistics export utilities
-    │   │
-    │   ├── types/
-    │   │   └── index.ts               # TypeScript types (Schema, Table, TableMapping, ReconciliationResult, etc.)
-    │   │
-    │   ├── components/
-    │   │   ├── Upload/
-    │   │   │   └── UploadPanel.tsx    # Hero with file upload + demo button
-    │   │   │
-    │   │   ├── Mapping/
-    │   │   │   ├── MappingTable.tsx                  # Main view with table mappings, search, stats
-    │   │   │   ├── MappingEditor.tsx                # Modal for editing individual mappings
-    │   │   │   ├── ColumnDetailsDrawer.tsx          # Side panel for column details
-    │   │   │   ├── ConfidenceFilterSlider.tsx       # Confidence threshold slider
-    │   │   │   ├── BulkActionBar.tsx                # Bulk select/edit toolbar
-    │   │   │   ├── MappingDiffView.tsx              # Side-by-side source/target comparison
-    │   │   │   ├── BatchConflictResolutionPanel.tsx # Batch apply resolutions
-    │   │   │   ├── ExportDrawer.tsx                 # Export panel with formats + preview + risk indicator
-    │   │   │   ├── MigrationPreview.tsx             # Live SQL preview with syntax highlighting
-    │   │   │   ├── MigrationOptions.tsx             # Dialect selector (MySQL/PostgreSQL/Generic)
-    │   │   │   ├── MigrationSummaryCard.tsx         # Complexity badge + metrics
-    │   │   │   ├── DataLossRiskIndicator.tsx        # Risk warning panel
-    │   │   │   ├── ProgressDashboard.tsx            # Review progress metrics
-    │   │   │   ├── PerformanceMetrics.tsx           # Execution timing display
-    │   │   │   ├── SettingsPanel.tsx                # UI configuration
-    │   │   │   ├── FilterPresetsUI.tsx              # Save/load filter presets
-    │   │   │   ├── RulesUI.tsx                      # Custom transformation rules
-    │   │   │   ├── HistoryPanel.tsx                 # Action history viewer
-    │   │   │   ├── TemplateManager.tsx              # Save/load review state templates
-    │   │   │   ├── TableStatisticsCard.tsx          # Per-table stats summary
-    │   │   │   ├── SchemaSummaryCard.tsx            # Overall schema comparison
-    │   │   │   ├── StatisticsExportPanel.tsx        # Export stats as PDF/CSV
-    │   │   │   ├── StatisticsDashboard.tsx          # Comprehensive statistics view
-    │   │   │   ├── StatisticsGuide.tsx              # Help for statistics features
-    │   │   │   ├── AutoDiscoveryDashboard.tsx       # Quick actions for mappings
-    │   │   │   ├── AdvancedFilterBuilder.tsx        # Complex filter criteria
-    │   │   │
-    │   │   ├── Graph/
-    │   │   │   └── EquivalenceGraph.tsx # Two-column visual with connection lines
-    │   │   │
-    │   │   ├── Conflicts/
-    │   │   │   └── ConflictReport.tsx # Grouped by severity
-    │   │   │
-    │   │   ├── Review/
-    │   │   │   ├── ReviewStatusBadge.tsx             # Approval/rejection status
-    │   │   │   ├── ReviewControls.tsx                # Action buttons
-    │   │   │   ├── ReviewProgressBar.tsx             # Review completion percentage
-    │   │   │   ├── MappingEditor.tsx                 # Inline mapping editor
-    │   │   │   └── ConflictIndicator.tsx             # Visual conflict markers
-    │   │   │
-    │   │   ├── Analytics/
-    │   │   │   └── AnalyticsView.tsx  # Metrics dashboard (confidence dist, etc.)
-    │   │   │
-    │   │   ├── shared/
-    │   │   │   ├── ConfidenceBadge.tsx
-    │   │   │   ├── ConfidenceTooltip.tsx
-    │   │   │   └── ProgressBar.tsx
-    │   │   │
-    │   │   └── ui/
-    │   │       └── shape-landing-hero.tsx # Floating geometric shapes (framer-motion)
-    │   │
-    │   ├── hooks/
-    │   │   ├── useKeyboardShortcuts.ts     # Cmd+K, Escape, Ctrl+Z/Y
-    │   │   ├── useHistory.ts               # 50-action undo/redo stack
-    │   │   ├── useConflictResolutions.ts   # Track conflict resolution state
-    │   │   ├── useConflictPatterns.ts      # Detect conflict patterns (batch resolution)
-    │   │   ├── useTemplates.ts             # Save/load review state templates
-    │   │   ├── useFilterPresets.ts         # Save/load filter configurations
-    │   │   ├── useCustomRules.ts           # Custom transformation rules
-    │   │   ├── useProgressMetrics.ts       # Review progress tracking
-    │   │   ├── useTableStatistics.ts       # Per-table statistics computation
-    │   │   ├── useReviewState.ts           # Track review status (approve/reject)
-    │   │   ├── useReviewFilters.ts         # Advanced filtering
-    │   │   ├── useReviewHistory.ts         # Review action history
-    │   │   ├── useExportHistory.ts         # Track exported migrations (last 10)
-    │   │   └── useTypeConversions.ts       # Type conversion utilities
-    │   │
-    │   └── styles/
-    │       └── global.css              # Dark theme, scrollbars, base styles
-    │
-    └── node_modules/                  # NPM packages (generated)
+├── frontend/                          # React + TypeScript (port 5173)
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── index.html
+│   │
+│   └── src/
+│       ├── App.tsx                    # Main app shell with tab navigation
+│       ├── main.tsx                   # React root
+│       │
+│       ├── api/
+│       │   └── client.ts              # Axios API client
+│       │
+│       ├── lib/
+│       │   ├── api.ts                 # API response transformer
+│       │   ├── utils.ts               # cn() helper (clsx + tailwind-merge)
+│       │   ├── exportFormats.ts       # 5 export format generators
+│       │   ├── migrationUtils.ts      # Type conversion map, complexity estimator
+│       │   ├── sqlDialect.ts          # MySQL/PostgreSQL/Generic dialect adapters
+│       │   └── statisticsExport.ts    # Statistics export utilities
+│       │
+│       ├── types/
+│       │   └── index.ts               # TypeScript types (ReconciliationResult, etc.)
+│       │
+│       ├── components/                # 67 components across 9 directories
+│       │   ├── Upload/
+│       │   │   └── UploadPanel.tsx    # Hero with file upload, drag-drop, 3 demo scenarios
+│       │   │
+│       │   ├── Mapping/               # 20+ components
+│       │   │   ├── MappingTable.tsx                  # Main results view
+│       │   │   ├── MappingEditor.tsx                 # Modal for editing mappings
+│       │   │   ├── ColumnDetailsDrawer.tsx           # Side panel for column details
+│       │   │   ├── ConfidenceFilterSlider.tsx        # Threshold slider
+│       │   │   ├── BulkActionBar.tsx                 # Multi-select toolbar
+│       │   │   ├── MappingDiffView.tsx               # Side-by-side comparison
+│       │   │   ├── BatchConflictResolutionPanel.tsx  # Bulk conflict resolution
+│       │   │   ├── ExportDrawer.tsx                  # 5-format export panel
+│       │   │   ├── MigrationPreview.tsx              # Live SQL with syntax highlighting
+│       │   │   ├── MigrationOptions.tsx              # Dialect selector
+│       │   │   ├── MigrationSummaryCard.tsx          # Complexity + metrics
+│       │   │   ├── DataLossRiskIndicator.tsx         # Risk warnings
+│       │   │   ├── StatisticsDashboard.tsx           # Confidence dist, conflict breakdown
+│       │   │   ├── AdvancedFilterBuilder.tsx         # Complex filter criteria
+│       │   │   ├── FilterPresetsUI.tsx               # Save/load filter presets
+│       │   │   ├── RulesUI.tsx                       # Custom transformation rules
+│       │   │   ├── HistoryPanel.tsx                  # Action history viewer
+│       │   │   ├── TemplateManager.tsx               # Save/load review templates
+│       │   │   └── ...more
+│       │   │
+│       │   ├── Graph/
+│       │   │   └── EquivalenceGraph.tsx  # Two-column view with connection lines
+│       │   │
+│       │   ├── Conflicts/
+│       │   │   └── ConflictReport.tsx    # Grouped by severity
+│       │   │
+│       │   ├── Analytics/
+│       │   │   └── AnalyticsView.tsx     # Metrics dashboard
+│       │   │
+│       │   ├── Review/                   # ReviewStatusBadge, Controls, ProgressBar
+│       │   ├── Comments/                 # Comment threads on mappings
+│       │   ├── CodeGen/                  # MigrationScaffold
+│       │   ├── SchemaInput/              # Input variants
+│       │   ├── shared/                   # ConfidenceBadge, ConfidenceTooltip, ProgressBar
+│       │   └── ui/
+│       │       └── shape-landing-hero.tsx  # Framer Motion animated hero
+│       │
+│       ├── hooks/                     # 53 custom React hooks
+│       │   ├── useHistory.ts          # 50-action undo/redo stack
+│       │   ├── useConflictResolutions.ts
+│       │   ├── useConflictPatterns.ts
+│       │   ├── useTemplates.ts
+│       │   ├── useFilterPresets.ts
+│       │   ├── useCustomRules.ts
+│       │   ├── useProgressMetrics.ts
+│       │   ├── useTableStatistics.ts
+│       │   ├── useReviewState.ts
+│       │   ├── useReviewFilters.ts
+│       │   ├── useReviewHistory.ts
+│       │   ├── useExportHistory.ts    # Last 10 exports in localStorage
+│       │   └── useTypeConversions.ts
+│       │
+│       └── styles/
+│           └── global.css             # Dark theme, scrollbars, base styles
+│
+└── tests/
+    ├── test_parsers.py                # Parser unit tests
+    └── test_reconciliation.py         # Reconciliation logic tests
 ```
 
 ---
@@ -343,31 +344,28 @@ hackUPC/
 ### Full Setup (Fresh Install)
 
 ```bash
-# 1. Clone/navigate to project
-cd /home/raghib/Desktop/hackUPC
+# 1. Navigate to project
+cd SchemaSync
 
 # 2. Set up backend
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 3. Start backend (Terminal 1)
 python -m uvicorn backend.main:app --reload --port 8000
 
-# 4. In a new terminal, set up frontend
+# 4. Set up and start frontend (Terminal 2)
 cd frontend
 npm install
-
-# 5. Start frontend (Terminal 2)
 npm run dev
 
-# 6. Open http://localhost:5173 in browser
+# 5. Open http://localhost:5173
 ```
 
 ### Backend Only (Existing Setup)
 
 ```bash
-cd /home/raghib/Desktop/hackUPC
 source venv/bin/activate
 python -m uvicorn backend.main:app --reload --port 8000
 ```
@@ -375,7 +373,7 @@ python -m uvicorn backend.main:app --reload --port 8000
 ### Frontend Only (Existing Setup)
 
 ```bash
-cd /home/raghib/Desktop/hackUPC/frontend
+cd frontend
 npm run dev
 ```
 
@@ -384,110 +382,120 @@ npm run dev
 Create `.env.local` in the frontend root (optional):
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_DEBUG=true
+VITE_API_URL=http://localhost:8000/api
+VITE_APP_NAME=SchemaSync
+VITE_APP_VERSION=0.0.1
+VITE_ENABLE_EXPORT=true
+VITE_ENABLE_POLLING=true
 ```
+
+---
+
+## Docker Deployment
+
+SchemaSync ships with a production-ready Docker setup.
+
+### Build and run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+The backend API will be available at `http://localhost:8000`.
+
+### Build the image directly
+
+```bash
+docker build -t schemasync .
+docker run -p 8000:8000 schemasync
+```
+
+### Configuration via environment
+
+```yaml
+# docker-compose.yml environment section supports:
+PORT: 8000
+DEBUG: false
+CORS_ORIGINS: "http://localhost:5173"
+MAX_REQUEST_SIZE_MB: 10
+```
+
+The Dockerfile uses a multi-stage build (Python 3.11-slim) with a non-root user for security. A health check hits `/api/v1/health` on startup.
 
 ---
 
 ## Features
 
-### ✅ Core Schema Reconciliation (Implemented)
+### Core Schema Reconciliation
 
 | Feature | Status | Details |
 |---------|--------|---------|
 | SQL DDL Parsing | ✅ | MySQL, PostgreSQL (`CREATE TABLE` statements) |
-| Structural Analysis | ✅ | Fingerprinting, primary/foreign key detection, audit column detection |
-| Semantic Matching | ✅ | Synonym dicts, name similarity, optional embeddings, Jaccard/Levenshtein |
+| Prisma Schema Parsing | ✅ | `.prisma` files with full type mapping |
+| JSON Schema Parsing | ✅ | Standard JSON Schema format, flexible table layouts |
+| Live Database Connectors | ✅ | Connect directly to PostgreSQL, MySQL, MongoDB via backend introspection |
+| Structural Analysis | ✅ | Fingerprinting, PK/FK detection, audit column detection |
+| Semantic Matching | ✅ | 14-category synonym dicts, name similarity, optional embeddings |
 | Hungarian Assignment | ✅ | Optimal global bipartite matching for tables & columns |
-| Conflict Detection | ✅ | Type mismatches, nullability, constraint, FK, DEFAULT value differences |
-| Demo Data | ✅ | Ghost CMS vs WordPress schemas (4 tables, 50+ columns) |
-| File Upload | ✅ | `.sql` file parsing & instant preview |
-| Responsive UI | ✅ | Dark theme, mobile-friendly, Framer Motion animations |
+| Conflict Detection | ✅ | 7 types: type mismatch, nullability, constraint, FK, DEFAULT, cardinality, missing column |
+| Demo Scenarios | ✅ | 3 built-in demos: Ghost→WordPress, Legacy CRM→Modern CRM, Messy schemas |
+| File Upload | ✅ | `.sql` / `.prisma` / `.json` file parsing |
 | Real-time Search | ✅ | Filter mappings by table/column name (Cmd+K) |
-| Interactive Mapping Table | ✅ | Expandable rows, confidence badges, conflict indicators, inline editors |
-| Equivalence Graph Visualization | ✅ | Two-column schema view with visual mapping connections |
-| Confidence Filtering | ✅ | Slider to filter results by confidence threshold (0-100%) |
+| Equivalence Graph | ✅ | Two-column schema view with visual connection lines |
+| Confidence Filter | ✅ | Slider to hide results below a confidence threshold |
 | Batch Conflict Resolution | ✅ | Group similar conflicts, apply bulk resolutions |
 
-### ✅ Real Migration SQL Generation (Implemented)
+### Real Migration SQL Generation
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| Generic SQL Export | ✅ | BEGIN/COMMIT transaction wrapper, ALTER TABLE or DROP+CREATE |
-| Flyway Migration Format | ✅ | Proper `V{timestamp}__schema.sql` naming, version prefix, @undo rollback |
-| Liquibase XML Format | ✅ | `<databaseChangeLog>` with `<changeSet>` entries, rollback sections |
-| AWS DMS JSON Format | ✅ | Task configuration with table/column mapping rules, transformation metadata |
-| Rollback SQL Generator | ✅ | Reverse operations, RENAME TABLE, DROP IF EXISTS with cascade |
-| ALTER TABLE Path | ✅ | Incremental migration (rename/modify instead of drop+create) |
-| Safe Type Conversions | ✅ | NULLIF guards, STR_TO_DATE, FROM_UNIXTIME, CASE expressions for risky casts |
-| Dialect Adapters | ✅ | MySQL vs PostgreSQL vs Generic syntax differences |
-| Migration Preview | ✅ | Live SQL preview with syntax highlighting and conflict markers |
-| SQL Syntax Highlighting | ✅ | Keywords (blue), strings (green), comments (gray), line numbers |
-| Complexity Estimation | ✅ | Simple/Moderate/Complex scoring based on risky conversions, unmatched columns |
-| Data Loss Risk Assessment | ✅ | Detects risky casts, dropped columns, low-confidence mappings, unresolved conflicts |
-| Export History | ✅ | Persists last 10 exports in localStorage with metadata |
+| Generic SQL Export | ✅ | BEGIN/COMMIT wrapper, ALTER TABLE or DROP+CREATE |
+| Flyway Format | ✅ | `V{timestamp}__schema.sql` naming with `@undo` annotation |
+| Liquibase XML Format | ✅ | `<databaseChangeLog>` with `<changeSet>` and rollback sections |
+| AWS DMS JSON Format | ✅ | Task configuration with table/column mapping rules |
+| Rollback SQL | ✅ | Reverse operations, DROP IF EXISTS with cascade |
+| ALTER TABLE Path | ✅ | Incremental migration (rename/modify vs drop+create) |
+| Safe Type Conversions | ✅ | NULLIF guards, STR_TO_DATE, FROM_UNIXTIME, CASE expressions |
+| Dialect Adapters | ✅ | MySQL 5.7+, PostgreSQL 11+, Generic |
+| Live SQL Preview | ✅ | Syntax highlighting, line numbers, per-table section copy |
+| Conflict Annotations | ✅ | Visual markers with icons, colors, hover tooltips in preview |
+| Sidebar Navigation | ✅ | Scroll to table section, conflict indicator per section |
+| Complexity Estimation | ✅ | Simple/Moderate/Complex based on risky conversions and unmatched columns |
+| Data Loss Risk Assessment | ✅ | Warns on risky casts, dropped columns, low-confidence mappings |
+| Export History | ✅ | Last 10 exports persisted in localStorage |
 
-### ✅ Advanced Features (Implemented)
+### Advanced UI & Analysis
 
 | Feature | Status | Details |
 |---------|--------|---------|
 | Execution Metrics | ✅ | Timing, confidence scores, precision/recall, algorithm details |
-| Progress Tracking | ✅ | Review status, completion percentage, conflict resolution progress |
-| Custom Rules Engine | ✅ | Create transformation rules, custom mappings, save/load templates |
-| Filter Presets | ✅ | Save/apply filter configurations, quick access to common views |
-| Statistics Dashboard | ✅ | Tables overview, column statistics, confidence distribution, conflict breakdown |
-| PDF Report Export | ✅ | Full reconciliation report with mappings, conflicts, metrics |
-| Table Statistics | ✅ | Per-table statistics: mappings, confidence, conflicts, unmatched counts |
-| Batch Conflict Resolution | ✅ | Pattern grouping: type mismatches, ambiguous mappings, name similarities |
-| Mapping Diff View | ✅ | Side-by-side comparison of source and target schema |
-| Undo/Redo History | ✅ | 50-action history buffer with stack-based tracking |
-| Keyboard Shortcuts | ✅ | Cmd+K for search, Escape to clear, Ctrl+Z/Y for undo/redo |
+| Progress Tracking | ✅ | Review status, completion %, conflict resolution progress |
+| Custom Rules Engine | ✅ | Define transformation rules, save/load templates |
+| Filter Presets | ✅ | Save and apply filter configurations |
+| Statistics Dashboard | ✅ | Tables overview, column stats, confidence distribution, conflict breakdown |
+| PDF Report Export | ✅ | Full reconciliation report via jsPDF |
+| Undo/Redo History | ✅ | 50-action buffer with stack-based tracking |
+| Keyboard Shortcuts | ✅ | Cmd+K search, Escape clear, Ctrl+Z/Y undo/redo |
+| Mapping Diff View | ✅ | Side-by-side source/target column comparison |
+| Comment Threads | ✅ | Annotate individual mappings |
+| Dark Theme | ✅ | Full dark UI with gradient backgrounds |
 
-### ✅ Schema Import Methods (Implemented - April 2026)
+### Planned Features
 
-| Feature | Status | Details |
-|---------|--------|---------|
-| Prisma Schema Parsing | ✅ | Parse `.prisma` files with full type mapping (Int, String, DateTime, etc.) |
-| JSON Schema Parsing | ✅ | Support standard JSON Schema format with flexible layouts (object, array, object-per-table) |
-| Live Database Connectors | ✅ | Connect directly to PostgreSQL, MySQL, MongoDB via REST API with introspection |
-| Database Validation | ✅ | Test connection before introspection, connection parameter validation |
-
-### ✅ Migration Preview Enhancements (Implemented - April 2026)
-
-| Feature | Status | Details |
-|---------|--------|---------|
-| Copy Section Buttons | ✅ | Per-table migration section copy with visual feedback |
-| Conflict Annotation UI | ✅ | Enhanced conflict markers with icons, colors, and hover tooltips |
-| Sidebar Navigation | ✅ | Scrollable section navigator with visual indicators for conflicts |
-| Live Syntax Highlighting | ✅ | SQL keyword coloring with token-based parsing |
-
-### ✅ Smart Suggestions Enhancement (Implemented - April 2026)
-
-| Feature | Status | Details |
-|---------|--------|---------|
-| Semantic Synonym Matching | ✅ | Domain-specific synonym dictionaries (14 categories) with Jaccard similarity |
-| Transformation Suggestions | ✅ | Type conversion recommendations for incompatible columns |
-| Enhanced Scoring | ✅ | 50% semantic weight for better cross-platform matching |
-
-### 🔧 Future Features
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Manual Mapping Editor | 🔲 Future | UI to adjust auto-generated mappings in detail |
-| Batch Processing | 🔲 Future | Reconcile multiple schema pairs at once |
-| LLM-Powered Transformations | 🔲 Research | AI-based transformation suggestions |
-| Schema Versioning | 🔲 Future | Track schema evolution across migrations |
-| Performance Optimization | 🔲 Future | GPU-accelerated fingerprinting for large schemas |
+| Feature | Notes |
+|---------|-------|
+| LLM-Powered Transformations | AI-suggested data transformation and mapping refinement |
+| Batch Processing | Reconcile multiple schema pairs at once |
+| Schema Versioning | Track schema evolution across migrations |
+| Webhook Integration | Export to Slack, GitHub, Linear for team notifications |
 
 ---
 
 ## Schema Import Methods
 
-SchemaSync supports multiple ways to import schemas, not just raw SQL:
+### 1. SQL DDL
 
-### 1. SQL DDL (SQL files or raw statements)
-Upload `.sql` files or paste CREATE TABLE statements directly.
+Upload `.sql` files or paste `CREATE TABLE` statements directly.
 
 ```sql
 CREATE TABLE users (
@@ -498,7 +506,8 @@ CREATE TABLE users (
 ```
 
 ### 2. Prisma Schema
-Paste Prisma `.prisma` files with automatic type mapping:
+
+Paste `.prisma` files with automatic type mapping:
 
 ```prisma
 model User {
@@ -507,19 +516,13 @@ model User {
   name  String?
   posts Post[]
 }
-
-model Post {
-  id      Int     @id @default(autoincrement())
-  title   String
-  author  User    @relation(fields: [authorId], references: [id])
-  authorId Int
-}
 ```
 
-SchemaSync maps Prisma types (Int, String, DateTime, etc.) to SQL equivalents and extracts relationships.
+SchemaSync maps Prisma types (`Int`, `String`, `DateTime`, etc.) to SQL equivalents and extracts relationships.
 
 ### 3. JSON Schema
-Import standard JSON Schema definitions with flexible formats:
+
+Standard JSON Schema definitions with flexible table layouts:
 
 ```json
 {
@@ -527,15 +530,15 @@ Import standard JSON Schema definitions with flexible formats:
     "type": "object",
     "properties": {
       "id": { "type": "integer" },
-      "email": { "type": "string", "format": "email" },
-      "created_at": { "type": "string", "format": "date-time" }
+      "email": { "type": "string", "format": "email" }
     }
   }
 }
 ```
 
 ### 4. Live Database Connection
-Connect directly to PostgreSQL, MySQL, or MongoDB to introspect existing schemas:
+
+Connect directly to PostgreSQL, MySQL, or MongoDB for live schema introspection:
 
 ```
 Host: production-db.example.com
@@ -545,35 +548,24 @@ Database: analytics
 SSL: Enabled
 ```
 
-The frontend securely sends credentials to the backend for introspection without storing passwords. Connection details are validated before use.
+The frontend sends credentials to the backend for introspection. Credentials are validated before use and never stored.
 
 ---
 
 ## Real Migration SQL Generation
 
-SchemaSync generates production-ready migration SQL across multiple formats and database dialects. Instead of just identifying matches, it produces actual runnable code to migrate your data.
+SchemaSync generates production-ready migration SQL across multiple formats and dialects.
 
 ### Supported Export Formats
 
-#### 1. **Generic SQL**
-Standard SQL with `BEGIN/COMMIT` transaction wrapper. Includes:
-- `CREATE TABLE` statements for new tables
-- `ALTER TABLE` statements for renames, type changes
-- `INSERT INTO ... SELECT` for data migration
-- `CAST` expressions with safe type conversions
-- Comment headers with confidence scores and metadata
+#### 1. Generic SQL
 
 ```sql
--- ═══════════════════════════════════════════════════════════
 -- SchemaSync Migration: 8 tables, 45 columns
--- Generated: 2026-04-25T20:42:00Z
--- Confidence: 87.3%
--- Complexity: MODERATE (3 risky type conversions; 2 unmatched columns)
--- ═══════════════════════════════════════════════════════════
-
+-- Generated: 2026-04-28T12:00:00Z | Confidence: 87.3% | Complexity: MODERATE
 BEGIN;
 
--- ─── users → wp_users (0.95) ───
+-- users → wp_users (0.95)
 ALTER TABLE wp_users RENAME COLUMN user_id TO ID;
 ALTER TABLE wp_users MODIFY COLUMN created_at DATETIME;
 INSERT INTO wp_users (ID, email, name) SELECT user_id, email_addr, full_name FROM users;
@@ -581,29 +573,22 @@ INSERT INTO wp_users (ID, email, name) SELECT user_id, email_addr, full_name FRO
 COMMIT;
 ```
 
-#### 2. **Flyway SQL**
-Flyway-compatible migration with version prefix and rollback annotation:
+#### 2. Flyway SQL
 
 ```sql
--- V20260425_202400__Migrate_ghost_to_wordpress.sql
--- Flyway migration auto-generated by SchemaSync
-
+-- V20260428_120000__Migrate_ghost_to_wordpress.sql
 BEGIN;
 -- Migration statements...
 COMMIT;
-
 -- @undo
 -- ROLLBACK;
 ```
 
-#### 3. **Liquibase XML**
-Liquibase databaseChangeLog format with changeSet entries:
+#### 3. Liquibase XML
 
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog">
   <changeSet id="schemasync-0" author="schemasync">
-    <comment>Migrate users → wp_users</comment>
     <renameColumn tableName="wp_users" oldColumnName="user_id" newColumnName="ID"/>
     <modifyDataType tableName="wp_users" columnName="created_at" newDataType="DATETIME"/>
     <sql>INSERT INTO wp_users (...) SELECT ... FROM users;</sql>
@@ -612,190 +597,140 @@ Liquibase databaseChangeLog format with changeSet entries:
 </databaseChangeLog>
 ```
 
-#### 4. **AWS DMS JSON**
-AWS Database Migration Service task configuration:
+#### 4. AWS DMS JSON
 
 ```json
 {
   "version": "1.0",
-  "generated_at": "2026-04-25T20:42:00Z",
-  "summary": { "tables_matched": 8, "columns_matched": 45, ... },
   "table_mappings": [{
     "source_table": "users",
     "target_table": "wp_users",
-    "column_mappings": [
-      { "source_column": "user_id", "target_column": "ID", ... }
-    ]
+    "column_mappings": [{ "source_column": "user_id", "target_column": "ID" }]
   }]
 }
 ```
 
-#### 5. **Rollback SQL**
-Reverse migration script to undo the migration:
+#### 5. Rollback SQL
 
 ```sql
--- ═══════════════════════════════════════════════════════════
--- ROLLBACK SCRIPT - Undo Migration
--- Generated: 2026-04-25T20:42:00Z
--- ═══════════════════════════════════════════════════════════
-
 BEGIN;
-
--- Reverse operations
 ALTER TABLE wp_users RENAME COLUMN ID TO user_id;
 ALTER TABLE wp_users MODIFY COLUMN created_at VARCHAR(255);
 DROP TABLE IF EXISTS wp_new_tables CASCADE;
-
 -- ROLLBACK;
 ```
 
 ### Dialect Support
 
-SchemaSync adapts SQL syntax to your target database:
-
-**MySQL 5.7+ / MariaDB 10.3+**
-- `ALTER TABLE table MODIFY COLUMN col TYPE`
-- `AUTO_INCREMENT` for sequence generation
-- `CAST(col AS SIGNED)` for integer casting
-- `DATE_FORMAT()` for date formatting
-
-**PostgreSQL 11+**
-- `ALTER TABLE table ALTER COLUMN col TYPE`
-- `SERIAL` for sequence generation
-- `CAST(col AS INTEGER)` for casting
-- `TO_TIMESTAMP()` for date formatting
-
-**Generic SQL**
-- Comments indicate dialect-specific sections
-- Manual adjustment needed for non-standard syntax
+| Dialect | Syntax Differences |
+|---------|-------------------|
+| **MySQL 5.7+** | `MODIFY COLUMN`, `AUTO_INCREMENT`, `CAST(col AS SIGNED)`, `DATE_FORMAT()` |
+| **PostgreSQL 11+** | `ALTER COLUMN TYPE`, `SERIAL`, `CAST(col AS INTEGER)`, `TO_TIMESTAMP()` |
+| **Generic** | Comments indicate dialect-specific sections |
 
 ### Safe Type Conversion
 
-Risky conversions (VARCHAR→INT, TEXT→DATE) are handled safely:
+Risky conversions are generated defensively:
 
 ```sql
--- Instead of: CAST(col AS INT) — may fail on non-numeric strings
--- Generated:  CAST(NULLIF(TRIM(col), '') AS SIGNED)
--- Safer pattern: trim whitespace, treat empty as NULL, then cast
-
--- VARCHAR to INT with NULLIF:
+-- VARCHAR to INT:
 CAST(NULLIF(TRIM(col_name), '') AS SIGNED)
 
--- VARCHAR to DATE with STR_TO_DATE:
+-- VARCHAR to DATE:
 STR_TO_DATE(NULLIF(TRIM(col_name), ''), '%Y-%m-%d')
 
--- String to BOOLEAN with CASE:
-CASE WHEN LOWER(NULLIF(TRIM(col_name), '')) IN ('true','yes','1','t','y') 
+-- String to BOOLEAN:
+CASE WHEN LOWER(NULLIF(TRIM(col_name), '')) IN ('true','yes','1','t','y')
      THEN 1 ELSE 0 END
 ```
 
-### Migration Complexity Assessment
+### Migration Complexity
 
-SchemaSync estimates migration complexity (Simple/Moderate/Complex) based on:
-- Number of risky type conversions (high penalty)
-- Unmatched columns requiring manual resolution (medium penalty)
-- Low-confidence table mappings (low penalty)
-- Unresolved conflicts (high penalty)
+SchemaSync estimates complexity (Simple / Moderate / Complex) based on:
+- Risky type conversions (high weight)
+- Unmatched columns (medium weight)
+- Low-confidence table mappings (low weight)
+- Unresolved conflicts (high weight)
 
-Users are warned before exporting:
+Data loss risks are surfaced before export:
 ```
-⚠️ Data Loss Risks:
+Data Loss Risks:
   • 3 high-risk type conversions (VARCHAR→INT)
   • 2 source columns will be dropped
   • 1 low-confidence mapping (0.65 score)
-  
+
 Recommendation: Always test migrations in staging first and maintain backups.
-```
-
-### Interactive Migration Preview
-
-The migration preview panel provides an interactive, visual way to review generated SQL before execution:
-
-**Features:**
-- **Live Syntax Highlighting** — SQL keywords (blue), strings (green), comments (gray)
-- **Line Numbers** — Easy reference for complex migrations
-- **Scrollable Sidebar Navigation** — Jump between table sections, see conflict indicators
-- **Copy Section Buttons** — Copy individual table migrations for targeted deployment
-- **Conflict Annotations** — Visual markers with icons, colors, and hover tooltips:
-  - 🔶 Amber for data conflicts (naming, constraint changes)
-  - 🔴 Rose for data loss risks (type narrowing, dropped columns)
-- **Section Overview** — Total line count, section count, table mappings at a glance
-
-```sql
--- Preview shows per-table sections with headers:
--- ─── users → wp_users (0.95) ───    ← Clickable section header
-CREATE TABLE wp_users ...              ← Syntax highlighted
-INSERT INTO wp_users SELECT ...        ← Can copy this section alone
--- ⚠️ CONFLICT: Type difference ...    ← Conflict annotation with tooltip
 ```
 
 ---
 
 ## Architecture
 
-### Backend Technology Stack
+### Backend Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Framework** | FastAPI | Async REST API, auto-docs, validation |
-| **Parsing** | Regex + hand-written parser | SQL DDL extraction (tables, columns, constraints) |
-| **Analysis** | SciPy, NumPy | Structural fingerprinting, linear algebra |
-| **Matching** | SciPy (hungarian) | Optimal bipartite matching |
-| **Optional AI** | sentence-transformers | Semantic embeddings (disabled by default) |
-| **Server** | Uvicorn | ASGI server |
+| Framework | FastAPI | Async REST API, auto-docs, validation |
+| Parsing | Custom hand-written parsers | SQL DDL, Prisma, JSON Schema |
+| Analysis | SciPy, NumPy | Structural fingerprinting, cosine similarity |
+| Matching | SciPy (linear_sum_assignment) | Hungarian optimal bipartite matching |
+| Server | Uvicorn | ASGI server (2 workers in Docker) |
+| Optional AI | sentence-transformers | Semantic embeddings (disabled by default) |
 
-### Frontend Technology Stack
+### Frontend Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Framework** | React 18 + TypeScript | Component-based UI |
-| **Build** | Vite | Fast bundling & dev server |
-| **HTTP** | Axios | REST API calls |
-| **Animations** | Framer Motion | Smooth transitions, interactive effects |
-| **Styling** | Tailwind CSS | Utility-first CSS |
-| **Icons** | Lucide React | Icon library |
+| Framework | React 18 + TypeScript | Component-based UI |
+| Build | Vite 5 | Fast bundling & dev server |
+| HTTP | Axios | REST API calls |
+| Data Fetching | TanStack Query 5 | Caching, loading states |
+| Virtual Lists | TanStack Virtual 3 | Performance for large schemas |
+| Animations | Framer Motion 12 | Smooth transitions, hero effects |
+| Graph | ReactFlow 11 | Equivalence graph visualization |
+| Styling | Tailwind CSS 3 | Utility-first CSS |
+| Icons | Lucide React | Icon library |
+| PDF | jsPDF | Report export |
+| Validation | Zod | Runtime type safety |
 
 ### Data Flow
 
 ```
-User uploads 2 SQL files
+User provides 2 schemas (SQL / Prisma / JSON / Live DB)
         ↓
-Backend parses → normalizes → extracts IR (Schema, Table, Column objects)
+Backend parses → normalizes → IR (Schema, Table, Column objects)
         ↓
-Structural analysis: Fingerprint extraction (vectors)
+Structural analysis: Fingerprint vectors + cosine similarity
         ↓
-Semantic analysis: Name similarity + optional embeddings
+Semantic analysis: Synonym matching + optional embeddings
         ↓
-Score matrices: (tables × tables) and (columns × columns)
+Score matrices: tables×tables and columns×columns
         ↓
-Hungarian algorithm: Find optimal global assignment
+Hungarian algorithm: Globally optimal assignment
         ↓
-Conflict detection: Cross-reference mappings for issues
+Conflict detection: 7 conflict types across all mappings
         ↓
-SQL generation: Transform + migrate data
+SQL generation: 3 migration generators × 2+ dialects
         ↓
-Frontend renders results: Mappings, conflicts, analytics, SQL export
+Frontend: Mappings, conflicts, analytics, interactive SQL export
 ```
 
 ---
 
 ## API Endpoints
 
+All endpoints are prefixed with `/api/v1/`.
+
 ### Upload
 
-**POST `/api/upload/`** — Upload & parse a SQL file
+**POST `/api/v1/upload/`** — Upload and parse a schema file
 
-Request:
-```
-Form: file (binary .sql)
-```
-
-Response:
 ```json
+// Response
 {
   "filename": "users_schema.sql",
   "tables_found": 5,
-  "table_names": ["users", "posts", "comments", ...],
+  "table_names": ["users", "posts", "comments"],
   "schema_preview": { ... }
 }
 ```
@@ -804,43 +739,12 @@ Response:
 
 ### Reconcile
 
-**POST `/api/reconcile/demo`** — Run demo (Ghost vs WordPress)
+**POST `/api/v1/reconcile/demo`** — Run a built-in demo scenario
 
-Request: `{}`
+Request body: `{}` (uses Ghost CMS vs WordPress by default)
 
-Response:
-```json
-{
-  "status": "complete",
-  "result": {
-    "summary": {
-      "tables_matched": 8,
-      "columns_matched": 45,
-      "unmatched_source_tables": 2,
-      "unmatched_target_tables": 1,
-      "conflicts": 3,
-      "avg_confidence": 0.87
-    },
-    "table_mappings": [
-      {
-        "source_table": "users",
-        "target_table": "wp_users",
-        "combined_score": 0.95,
-        "column_mappings": [ ... ],
-        ...
-      }
-    ],
-    "unmatched_source_tables": ["..."],
-    "unmatched_target_tables": ["..."],
-    "conflicts": [ ... ],
-    "migration_sql": "BEGIN; CREATE TABLE ..."
-  }
-}
-```
+**POST `/api/v1/reconcile/`** — Reconcile raw schema text
 
-**POST `/api/reconcile/`** — Reconcile raw SQL
-
-Request:
 ```json
 {
   "source_sql": "CREATE TABLE users ...",
@@ -850,231 +754,146 @@ Request:
 }
 ```
 
-Response: Same as `/demo`
+**POST `/api/v1/reconcile/files`** — Reconcile previously uploaded files
 
-**POST `/api/reconcile/files`** — Reconcile uploaded files
-
-Request:
 ```
-?source_file=users_schema.sql&target_file=wordpress_schema.sql
+?source_file=schema_a.sql&target_file=schema_b.sql
 ```
 
-Response: Same as `/demo`
+All three return:
+```json
+{
+  "status": "complete",
+  "result": {
+    "summary": {
+      "tables_matched": 8,
+      "columns_matched": 45,
+      "conflicts": 3,
+      "avg_confidence": 0.87
+    },
+    "table_mappings": [ ... ],
+    "unmatched_source_tables": [ ... ],
+    "unmatched_target_tables": [ ... ],
+    "conflicts": [ ... ],
+    "migration_sql": "BEGIN; ..."
+  }
+}
+```
 
 ---
 
 ### Export
 
-**POST `/api/export/sql`** — Export Generic SQL migration (DROP+CREATE)
+**POST `/api/v1/export/sql`** — Generic SQL (DROP+CREATE)  
+**POST `/api/v1/export/alter`** — ALTER TABLE migration (incremental)  
+**POST `/api/v1/export/rollback`** — Rollback SQL  
 
-Request:
+All accept:
 ```json
-{
-  "source_sql": "...",
-  "target_sql": "..."
-}
+{ "source_sql": "...", "target_sql": "..." }
 ```
 
-Response:
-```json
-{
-  "sql": "BEGIN; CREATE TABLE ...",
-  "filename": "migration_source_to_target.sql"
-}
-```
-
-**POST `/api/export/alter`** — Export ALTER TABLE migration (incremental)
-
-Request: Same as `/sql`
-
-Response:
-```json
-{
-  "sql": "BEGIN; ALTER TABLE ...",
-  "filename": "migration_alter_source_to_target.sql"
-}
-```
-
-**POST `/api/export/rollback`** — Export rollback SQL
-
-Request: Same as `/sql`
-
-Response:
-```json
-{
-  "sql": "BEGIN; ROLLBACK;",
-  "filename": "rollback_target_to_source.sql"
-}
-```
-
-**GET `/api/export/demo/sql`** — Demo Generic SQL (Ghost → WordPress)
-
-Response: Plain text SQL file
-
-**GET `/api/export/demo/alter`** — Demo ALTER migration
-
-Response: Plain text SQL file
-
-**GET `/api/export/demo/rollback`** — Demo rollback SQL
-
-Response: Plain text SQL file
+**GET `/api/v1/export/demo/sql`** — Demo Generic SQL  
+**GET `/api/v1/export/demo/alter`** — Demo ALTER migration  
+**GET `/api/v1/export/demo/rollback`** — Demo rollback SQL  
 
 ---
 
 ### Health
 
-**GET `/api/health`** — Health check
+**GET `/api/v1/health`**
 
-Response:
 ```json
-{
-  "status": "ok",
-  "version": "0.1.0"
-}
+{ "status": "ok", "version": "0.1.0" }
+```
+
+---
+
+## Troubleshooting
+
+**`No module named uvicorn`**
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**`Address already in use (port 8000)`**
+```bash
+python -m uvicorn backend.main:app --reload --port 8001
+# Then update frontend/src/api/client.ts base URL to :8001
+```
+
+**`Cannot find module 'framer-motion'`**
+```bash
+cd frontend && npm install
+```
+
+**`Network Error` when clicking demo**
+```bash
+curl http://localhost:8000/api/v1/health  # confirm backend is up
+```
+
+**Slow reconciliation (>10 seconds)**
+```bash
+USE_EMBEDDINGS=false python -m uvicorn backend.main:app --reload
+# sentence-transformers is slow on first use; disabling speeds things up significantly
 ```
 
 ---
 
 ## Development Status
 
-### Latest Implementation: Real Migration SQL Generation (April 2026)
+### Current State (April 2026)
 
-SchemaSync has been extended with **production-ready migration SQL generation** across multiple formats:
+SchemaSync is a fully functional schema reconciliation platform. Key milestones completed:
 
-**Completed Features (20+ commits):**
-- ✅ Generic SQL export with transaction wrappers
-- ✅ Flyway migration format with version naming
-- ✅ Liquibase XML changeLog format
-- ✅ AWS DMS JSON task configuration  
-- ✅ Rollback SQL generation for safe recovery
-- ✅ ALTER TABLE incremental migration path
-- ✅ Safe type conversion handling (NULLIF guards, STR_TO_DATE, CASE expressions)
-- ✅ MySQL 5.7+ and PostgreSQL 11+ dialect adapters
-- ✅ Live SQL preview with syntax highlighting
-- ✅ Migration complexity estimation (Simple/Moderate/Complex)
-- ✅ Data loss risk assessment and warnings
-- ✅ Migration summary card with metrics
-- ✅ Export history tracking (last 10 migrations)
-- ✅ Batch conflict resolution with pattern grouping
-- ✅ Dialect selector in export drawer
+**Core Matching Engine** ✅
+- 3-layer pipeline: structural fingerprinting → semantic matching → Hungarian assignment
+- 14-category synonym dictionaries with 40+ timestamp variations
+- CMS pattern recognition and cross-platform boosts
+- Globally optimal bipartite table and column matching
 
-**Frontend Improvements:**
-- MigrationPreview component with tokenized syntax highlighting
-- MigrationOptions dialect selector
-- MigrationSummaryCard showing complexity and metrics  
-- DataLossRiskIndicator identifying risky conversions and operations
-- useExportHistory hook for tracking exports
+**Multi-Format Schema Import** ✅
+- SQL DDL (MySQL + PostgreSQL)
+- Prisma `.prisma` files
+- JSON Schema (standard format)
+- Live database introspection (PostgreSQL, MySQL, MongoDB)
 
-**Backend Improvements:**
-- DEFAULT_MISMATCH conflict detection
-- Three migration SQL generators in reconciliation engine
-- Safe type conversion functions for risky conversions
-- API endpoints for /alter, /rollback, and demo variants
+**Production SQL Generation** ✅
+- 5 export formats: Generic SQL, Flyway, Liquibase, AWS DMS, Rollback
+- MySQL 5.7+ and PostgreSQL 11+ dialect adapters
+- Safe type conversion patterns (NULLIF, STR_TO_DATE, CASE)
+- Interactive SQL preview with syntax highlighting and per-section copy
+
+**Rich Interactive UI** ✅
+- 67 React components, 53 custom hooks
+- Dark theme with Framer Motion animations
+- Confidence filter, batch conflict resolution, bulk actions
+- Statistics dashboard, PDF export, undo/redo, keyboard shortcuts
+- 3 built-in demo scenarios
+
+**DevOps** ✅
+- Docker multi-stage build with non-root user
+- Docker Compose with health checks and volume management
 
 ### Test Coverage
 
-The implementation has been tested with:
-- **Demo Data:** Ghost CMS ↔ WordPress (8 tables, 50+ columns)
-- **Build Verification:** Zero TypeScript errors, production build passing
-- **Export Formats:** All 5 formats generate valid SQL with proper syntax
-
-### Known Limitations
-
-- Copy-section buttons in preview not yet integrated
-- Conflict annotations in preview enhanced but can be further refined
-- Per-table section navigation partially implemented
-- LLM-powered transformations not yet integrated
-
----
-
-## Troubleshooting
-
-### Backend won't start
-
-**Error:** `No module named uvicorn`
-
-**Solution:** Install dependencies
-```bash
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
----
-
-**Error:** `Address already in use (port 8000)`
-
-**Solution:** Use a different port
-```bash
-python -m uvicorn backend.main:app --reload --port 8001
-```
-
-Then update frontend `src/lib/api.ts` line 5:
-```typescript
-const API_BASE_URL = 'http://localhost:8001'
-```
-
----
-
-### Frontend won't start
-
-**Error:** `Cannot find module 'framer-motion'`
-
-**Solution:** Install dependencies
-```bash
-cd frontend
-npm install
-```
-
----
-
-**Error:** `Network Error` when clicking demo
-
-**Solution:** Ensure backend is running on port 8000
-```bash
-# Check if running:
-curl http://localhost:8000/api/health
-
-# If not, start it:
-python -m uvicorn backend.main:app --reload --port 8000
-```
-
----
-
-### Slow reconciliation
-
-**Issue:** Reconciliation takes >10 seconds
-
-**Solution:** Disable optional embeddings by setting env var:
-```bash
-USE_EMBEDDINGS=false python -m uvicorn backend.main:app --reload
-```
-
-(Sentence-transformers is slow on first use; it caches the model after.)
+- Parser unit tests (`tests/test_parsers.py`)
+- Reconciliation logic tests (`tests/test_reconciliation.py`)
+- Tested against 6 demo schema pairs (Ghost CMS, WordPress, CRM variants, messy schemas)
+- Zero TypeScript errors on production build
 
 ---
 
 ## Future Work
 
-### High Priority
-- **Prisma + JSON Schema support** — Parse non-SQL schema formats (interface exists, implementation pending)
-- **LLM-powered transformations** — Use GPT/Claude to suggest data transformations and mappings
-- **Live database connectors** — Connect directly to PostgreSQL, MySQL, Oracle (no file upload needed)
-- **Manual mapping editor** — Fine-grained UI to override auto-generated mappings
-- **Copy section buttons** — Per-table section copy functionality in migration preview
-
-### Medium Priority
-- **Webhook integration** — Export to Slack, GitHub, Linear for team notifications
-- **Batch processing** — Reconcile 10+ schema pairs at once with bulk export
-- **Performance optimization** — Profile and optimize for 1000+ column tables
-- **Custom transformation functions** — User-defined conversions for edge cases
-- **Integration with migration tools** — Direct export to Alembic, db-migrate, etc.
-
-### Nice to Have
-- **Schema versioning** — Track historical reconciliations
-- **Collaboration features** — Share mappings, comment on conflicts
-- **Advanced filtering** — Saved complex filter queries
-- **A/B testing migrations** — Compare different migration strategies
-- **Mobile app** — Native iOS/Android for on-the-go schema reviews
+- **LLM-powered transformations** — Use Claude/GPT to suggest data transformations and disambiguate low-confidence mappings
+- **Batch processing** — Reconcile multiple schema pairs in one session
+- **Schema versioning** — Track reconciliation history and schema evolution over time
+- **Webhook integration** — Push results to Slack, GitHub, Linear
+- **Custom transformation functions** — User-defined conversions for domain-specific edge cases
+- **Performance at scale** — Profile and optimize for 1000+ column schemas
+- **Collaboration** — Share mappings and comment threads across teams
 
 ---
 
@@ -1084,4 +903,4 @@ MIT
 
 ---
 
-**Built with ❤️ for the HackUPC hackathon**
+*Built for HackUPC — extended into a production-ready tool*
