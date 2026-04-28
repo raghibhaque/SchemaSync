@@ -146,6 +146,7 @@ export default function UploadPanel({ onResult }: Props) {
           </p>
 
           {/* Ghost → WordPress */}
+          <button
             onClick={handleDemo}
             disabled={isLoading}
             title="Ghost CMS vs WordPress — 4 tables, 50+ columns, cross-platform CMS mapping"
