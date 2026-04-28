@@ -186,6 +186,24 @@ class APIClient {
     return transformResult(result)
   }
 
+  async runMessyDemo(): Promise<ReconciliationResult> {
+    const res = await this.client.post<BackendReconcileResponse>('/reconcile/messy')
+    const { status, result, error } = res.data
+    if (status !== 'complete' || !result) {
+      throw new Error(error ?? 'Messy demo reconciliation failed')
+    }
+    return transformResult(result)
+  }
+
+  async runCRMDemo(): Promise<ReconciliationResult> {
+    const res = await this.client.post<BackendReconcileResponse>('/reconcile/crm')
+    const { status, result, error } = res.data
+    if (status !== 'complete' || !result) {
+      throw new Error(error ?? 'CRM demo reconciliation failed')
+    }
+    return transformResult(result)
+  }
+
   async uploadFile(file: File): Promise<string> {
     const formData = new FormData()
     formData.append('file', file)
