@@ -110,3 +110,25 @@ CREATE TABLE SF_CAMP (
     KEY idx_stat   (stat),
     KEY idx_typ    (typ)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE SF_ACTV (
+    actv_id     INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    subj        VARCHAR(255) NOT NULL,
+    typ         VARCHAR(50)  NOT NULL DEFAULT 'Task',
+    stat        VARCHAR(50)  NOT NULL DEFAULT 'Not Started',
+    pri         VARCHAR(20)  NOT NULL DEFAULT 'Normal',
+    due_dt      DATE         DEFAULT NULL,
+    comp_dt     DATETIME     DEFAULT NULL,
+    who_id      INT          DEFAULT NULL,
+    who_typ     VARCHAR(20)  DEFAULT NULL,
+    what_id     INT          DEFAULT NULL,
+    what_typ    VARCHAR(50)  DEFAULT NULL,
+    desc_txt    TEXT         DEFAULT NULL,
+    is_del      TINYINT(1)   NOT NULL DEFAULT 0,
+    ownr_id     INT          DEFAULT NULL,
+    cre_dt      DATETIME     NOT NULL,
+    mod_dt      DATETIME     DEFAULT NULL,
+    KEY idx_who    (who_id),
+    KEY idx_what   (what_id),
+    KEY idx_due    (due_dt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
