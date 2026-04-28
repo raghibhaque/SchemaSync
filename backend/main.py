@@ -6,13 +6,16 @@ Run with: uvicorn backend.main:app --reload --port 8000
 
 import asyncio
 import logging
+import sys
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.api.routes import upload, reconcile, export
@@ -170,8 +173,29 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
 
-# ── Root ──────────────────────────────────────────────────────────────────────
+# ── Frontend static files ─────────────────────────────────────────────────────
 
-@app.get("/")
-async def root():
-    return {"message": "SchemaSync API", "docs": "/docs"}
+def _dist_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "frontend" / "dist"
+    return Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+
+_DIST = _dist_dir()
+
+if _DIST.exists():
+    assets = _DIST / "assets"
+    if assets.exists():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        # Serve exact files (favicon.ico, robots.txt, etc.)
+        candidate = _DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_DIST / "index.html")
+else:
+    @app.get("/")
+    async def root():
+        return {"message": "SchemaSync API — build the frontend or run `npm run dev`", "docs": "/docs"}

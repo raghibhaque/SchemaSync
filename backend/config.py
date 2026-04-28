@@ -5,18 +5,34 @@ Configuration — all settings in one place.
 import logging
 import os
 import re
+import sys
 import warnings
 from pathlib import Path
 
 _log = logging.getLogger(__name__)
 
 
-BASE_DIR = Path(__file__).resolve().parent
+def _base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        # Running as a PyInstaller bundle — data lives under sys._MEIPASS/backend
+        return Path(sys._MEIPASS) / "backend"
+    return Path(__file__).resolve().parent
+
+
+def _upload_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        # sys._MEIPASS is read-only; write uploads to a user-writable location
+        app_data = Path(os.getenv("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+        return app_data / "SchemaSync" / "uploads"
+    return Path(__file__).resolve().parent / "uploads"
+
+
+BASE_DIR = _base_dir()
 DEMO_DIR = BASE_DIR / "demo"
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = _upload_dir()
 CRM_LEGACY_SCHEMA  = DEMO_DIR / "crm_legacy_schema.sql"
 CRM_MODERN_SCHEMA  = DEMO_DIR / "crm_modern_schema.sql"
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
