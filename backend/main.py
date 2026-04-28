@@ -20,6 +20,7 @@ from backend.api.routes.graph import router as graph_router
 from backend.api.routes.suggestions import router as suggestions_router
 from backend.api.routes.samples import router as samples_router
 from backend.api.routes.health import router as health_router
+from backend.api.routes.validate import router as validate_router
 from backend.api.errors import (
     ErrorCode, ErrorResponse,
     HTTP_STATUS_TO_ERROR_CODE,
@@ -98,6 +99,7 @@ app.include_router(graph_router,       prefix=API_V1_PREFIX)
 app.include_router(suggestions_router, prefix=API_V1_PREFIX)
 app.include_router(samples_router,     prefix=API_V1_PREFIX)
 app.include_router(health_router,      prefix=API_V1_PREFIX)
+app.include_router(validate_router,    prefix=API_V1_PREFIX)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
