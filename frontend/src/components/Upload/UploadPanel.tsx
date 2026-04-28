@@ -216,7 +216,7 @@ export default function UploadPanel({ onResult }: Props) {
         {/* Divider */}
         <motion.div variants={fadeUp(4)} initial="hidden" animate="visible" className="mb-8 flex items-center gap-4">
           <div className="h-px flex-1 bg-white/[0.06]" />
-          <span className="text-[11px] font-medium uppercase tracking-widest text-white/25">or upload your own</span>
+          <span className="text-[11px] font-medium uppercase tracking-widest text-white/25">or upload your own schemas</span>
           <div className="h-px flex-1 bg-white/[0.06]" />
         </motion.div>
 
