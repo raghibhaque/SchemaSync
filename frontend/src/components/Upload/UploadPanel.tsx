@@ -51,6 +51,16 @@ export default function UploadPanel({ onResult }: Props) {
     run('ghost', () => apiClient.runDemo())
   }
 
+  const handleMessyDemo = () => {
+    showToast('Loading e-commerce demo...', 'info', 1500)
+    run('messy', () => apiClient.runMessyDemo())
+  }
+
+  const handleCRMDemo = () => {
+    showToast('Loading CRM demo...', 'info', 1500)
+    run('crm', () => apiClient.runCRMDemo())
+  }
+
   const handleReconcile = () => {
     if (!sourceFile || !targetFile) return
     showToast('Uploading files...', 'info', 2000)
