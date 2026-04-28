@@ -309,3 +309,23 @@ async def export_crm_sql(req: CRMDemoRequest = CRMDemoRequest(), dialect: SQLDia
         sql=result.migration_sql or "-- No migration generated",
         filename=f"migration_{r.source_name}_to_{r.target_name}.sql",
     )
+
+
+@router.get("/crm/alter", response_model=ExportResponse, responses=_ERR)
+async def export_crm_alter(req: CRMDemoRequest = CRMDemoRequest(), dialect: SQLDialect = _DIALECT_Q):
+    """Export Salesforce → HubSpot ALTER TABLE incremental migration."""
+    result, _, _, r = _crm_result(req, dialect)
+    return ExportResponse(
+        sql=result.migration_alter_sql or "-- No ALTER TABLE migration generated",
+        filename=f"migration_alter_{r.source_name}_to_{r.target_name}.sql",
+    )
+
+
+@router.get("/crm/rollback", response_model=ExportResponse, responses=_ERR)
+async def export_crm_rollback(req: CRMDemoRequest = CRMDemoRequest(), dialect: SQLDialect = _DIALECT_Q):
+    """Export rollback SQL to undo the Salesforce → HubSpot migration."""
+    result, _, _, r = _crm_result(req, dialect)
+    return ExportResponse(
+        sql=result.rollback_sql or "-- No rollback generated",
+        filename=f"rollback_{r.target_name}_to_{r.source_name}.sql",
+    )
