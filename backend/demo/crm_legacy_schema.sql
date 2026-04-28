@@ -21,3 +21,24 @@ CREATE TABLE SF_CNTCT (
     KEY idx_acct   (acct_id),
     KEY idx_ownr   (ownr_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE SF_ACCT (
+    acct_id     INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    acct_nm     VARCHAR(200)  NOT NULL,
+    acct_typ    VARCHAR(50)   DEFAULT NULL,
+    indsty      VARCHAR(100)  DEFAULT NULL,
+    ann_rev     DECIMAL(15,2) DEFAULT NULL,
+    emp_cnt     INT           DEFAULT NULL,
+    ph          VARCHAR(40)   DEFAULT NULL,
+    website     VARCHAR(255)  DEFAULT NULL,
+    blng_st     VARCHAR(200)  DEFAULT NULL,
+    blng_cty    VARCHAR(100)  DEFAULT NULL,
+    blng_cntry  VARCHAR(50)   DEFAULT 'US',
+    ownr_id     INT           DEFAULT NULL,
+    prnt_acct   INT           DEFAULT NULL,
+    is_del      TINYINT(1)    NOT NULL DEFAULT 0,
+    cre_dt      DATETIME      NOT NULL,
+    mod_dt      DATETIME      DEFAULT NULL,
+    KEY idx_nm     (acct_nm),
+    KEY idx_ownr   (ownr_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
