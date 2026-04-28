@@ -42,3 +42,25 @@ CREATE TABLE SF_ACCT (
     KEY idx_nm     (acct_nm),
     KEY idx_ownr   (ownr_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE SF_OPPTY (
+    oppty_id    INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    oppty_nm    VARCHAR(200)  NOT NULL,
+    acct_id     INT           DEFAULT NULL,
+    stg         VARCHAR(50)   NOT NULL DEFAULT 'Prospecting',
+    amt         DECIMAL(15,2) DEFAULT NULL,
+    cls_dt      DATE          DEFAULT NULL,
+    prob        TINYINT       NOT NULL DEFAULT 10,
+    typ         VARCHAR(50)   DEFAULT NULL,
+    src         VARCHAR(50)   DEFAULT NULL,
+    fcast_cat   VARCHAR(50)   DEFAULT NULL,
+    is_clos_won TINYINT(1)    NOT NULL DEFAULT 0,
+    is_del      TINYINT(1)    NOT NULL DEFAULT 0,
+    ownr_id     INT           DEFAULT NULL,
+    cre_dt      DATETIME      NOT NULL,
+    mod_dt      DATETIME      DEFAULT NULL,
+    KEY idx_acct   (acct_id),
+    KEY idx_stg    (stg),
+    KEY idx_ownr   (ownr_id),
+    FOREIGN KEY (acct_id) REFERENCES SF_ACCT(acct_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
