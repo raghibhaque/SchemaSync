@@ -90,3 +90,24 @@ CREATE TABLE leads (
     KEY idx_status   (lead_status),
     KEY idx_owner    (owner_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE campaigns (
+    campaign_id          BIGINT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    campaign_name        VARCHAR(200)  NOT NULL,
+    campaign_status      VARCHAR(50)   NOT NULL DEFAULT 'draft',
+    campaign_type        VARCHAR(50)   DEFAULT NULL,
+    start_date           DATE          DEFAULT NULL,
+    end_date             DATE          DEFAULT NULL,
+    budget               DECIMAL(15,2) DEFAULT NULL,
+    actual_cost          DECIMAL(15,2) DEFAULT NULL,
+    expected_responses   INT           DEFAULT NULL,
+    actual_responses     INT           NOT NULL DEFAULT 0,
+    expected_revenue     DECIMAL(15,2) DEFAULT NULL,
+    actual_revenue       DECIMAL(15,2) DEFAULT NULL,
+    is_active            BOOLEAN       NOT NULL DEFAULT TRUE,
+    owner_id             BIGINT        DEFAULT NULL,
+    created_at           TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TIMESTAMP     DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_status   (campaign_status),
+    KEY idx_type     (campaign_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
