@@ -219,6 +219,32 @@ TABLE_SYNONYMS: dict[str, str] = {
     # E-commerce: reviews
     "reviews": "reviews", "ratings": "reviews",
     "product_reviews": "reviews",
+    # CRM: contacts (people in a CRM)
+    "contacts": "contacts", "contact": "contacts",
+    "sf_cntct": "contacts", "cntct": "contacts", "cntcts": "contacts",
+    # CRM: companies / accounts (organisations, not user-accounts)
+    "companies": "companies", "company": "companies", "organisations": "companies",
+    "organizations": "companies", "sf_acct": "companies",
+    "accounts_crm": "companies",
+    # CRM: deals / opportunities
+    "deals": "deals", "deal": "deals", "opportunities": "deals",
+    "opportunity": "deals", "sf_oppty": "deals", "oppty": "deals",
+    "pipeline": "deals",
+    # CRM: leads (pre-contact prospects)
+    "leads": "leads", "lead": "leads", "sf_ld": "leads", "prospects": "leads",
+    # CRM: campaigns (marketing)
+    "campaigns": "campaigns", "campaign": "campaigns",
+    "sf_camp": "campaigns", "marketing_campaigns": "campaigns",
+    # CRM: activities / tasks / engagements
+    "activities": "activities", "activity": "activities",
+    "tasks": "activities", "task": "activities",
+    "sf_actv": "activities", "engagements": "activities",
+    # CRM: deal-contact roles (junction)
+    "deal_contacts": "deal_contacts", "sf_oppty_cntct": "deal_contacts",
+    "opportunity_contacts": "deal_contacts", "contact_roles": "deal_contacts",
+    # CRM: campaign membership / enrollment
+    "campaign_enrollments": "campaign_members", "sf_camp_mbr": "campaign_members",
+    "campaign_members": "campaign_members", "campaign_recipients": "campaign_members",
 }
 
 
