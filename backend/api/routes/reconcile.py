@@ -449,6 +449,20 @@ async def reconcile_crm_stats(req: CRMDemoRequest = CRMDemoRequest()):
     }
 
 
+@router.post("/async/crm", response_model=JobSubmitResponse, responses=_ERR)
+async def reconcile_async_crm(background_tasks: BackgroundTasks, req: CRMDemoRequest = CRMDemoRequest()):
+    source, target = _crm_schemas(req)
+    job = create_job()
+    background_tasks.add_task(run_reconciliation_job, job.id, source, target)
+    return JobSubmitResponse(job_id=job.id)
+
+
+@router.post("/stream/crm", responses=_ERR)
+async def reconcile_stream_crm(req: CRMDemoRequest = CRMDemoRequest()):
+    source, target = _crm_schemas(req)
+    return StreamingResponse(stream_reconciliation(source, target), media_type="text/event-stream", headers=_SSE_HEADERS)
+
+
 @router.post("/stream/files", responses=_ERR)
 async def reconcile_stream_files(source_file: str, target_file: str):
     source_path = UPLOAD_DIR / source_file
