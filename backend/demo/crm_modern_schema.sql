@@ -146,3 +146,19 @@ CREATE TABLE deal_contacts (
     FOREIGN KEY (deal_id)    REFERENCES deals(deal_id),
     FOREIGN KEY (contact_id) REFERENCES contacts(contact_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE campaign_enrollments (
+    enrollment_id    BIGINT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    campaign_id      BIGINT      NOT NULL,
+    lead_id          BIGINT      DEFAULT NULL,
+    contact_id       BIGINT      DEFAULT NULL,
+    enrollment_status VARCHAR(50) NOT NULL DEFAULT 'enrolled',
+    response_date    TIMESTAMP   DEFAULT NULL,
+    has_responded    BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP   DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_campaign (campaign_id),
+    KEY idx_lead     (lead_id),
+    KEY idx_contact  (contact_id),
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
