@@ -111,3 +111,25 @@ CREATE TABLE campaigns (
     KEY idx_status   (campaign_status),
     KEY idx_type     (campaign_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE activities (
+    activity_id      BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    subject          VARCHAR(255) NOT NULL,
+    activity_type    VARCHAR(50)  NOT NULL DEFAULT 'task',
+    activity_status  VARCHAR(50)  NOT NULL DEFAULT 'not_started',
+    priority         VARCHAR(20)  NOT NULL DEFAULT 'medium',
+    due_date         DATE         DEFAULT NULL,
+    completed_at     TIMESTAMP    DEFAULT NULL,
+    contact_id       BIGINT       DEFAULT NULL,
+    contact_type     VARCHAR(20)  DEFAULT NULL,
+    associated_id    BIGINT       DEFAULT NULL,
+    associated_type  VARCHAR(50)  DEFAULT NULL,
+    description      TEXT         DEFAULT NULL,
+    is_deleted       BOOLEAN      NOT NULL DEFAULT FALSE,
+    owner_id         BIGINT       DEFAULT NULL,
+    created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP    DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_contact  (contact_id),
+    KEY idx_assoc    (associated_id),
+    KEY idx_due      (due_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
