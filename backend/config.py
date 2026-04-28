@@ -14,6 +14,8 @@ _log = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 DEMO_DIR = BASE_DIR / "demo"
 UPLOAD_DIR = BASE_DIR / "uploads"
+CRM_LEGACY_SCHEMA  = DEMO_DIR / "crm_legacy_schema.sql"
+CRM_MODERN_SCHEMA  = DEMO_DIR / "crm_modern_schema.sql"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 HOST = os.getenv("HOST", "0.0.0.0")
