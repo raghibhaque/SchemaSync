@@ -98,7 +98,7 @@ export default function UploadPanel({ onResult }: Props) {
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-lg px-6 py-16">
+      <div className="relative z-10 w-full max-w-xl px-6 py-16">
 
         {/* Badge */}
         <motion.div
