@@ -133,3 +133,16 @@ CREATE TABLE activities (
     KEY idx_assoc    (associated_id),
     KEY idx_due      (due_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE deal_contacts (
+    deal_contact_id  BIGINT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    deal_id          BIGINT      NOT NULL,
+    contact_id       BIGINT      NOT NULL,
+    contact_role     VARCHAR(80) DEFAULT NULL,
+    is_primary       BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_deal     (deal_id),
+    KEY idx_contact  (contact_id),
+    FOREIGN KEY (deal_id)    REFERENCES deals(deal_id),
+    FOREIGN KEY (contact_id) REFERENCES contacts(contact_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
