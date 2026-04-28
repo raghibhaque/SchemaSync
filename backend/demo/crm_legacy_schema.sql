@@ -145,3 +145,19 @@ CREATE TABLE SF_OPPTY_CNTCT (
     FOREIGN KEY (oppty_id) REFERENCES SF_OPPTY(oppty_id),
     FOREIGN KEY (cntct_id) REFERENCES SF_CNTCT(cntct_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE SF_CAMP_MBR (
+    mbr_id      INT         NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    camp_id     INT         NOT NULL,
+    ld_id       INT         DEFAULT NULL,
+    cntct_id    INT         DEFAULT NULL,
+    stat        VARCHAR(50) NOT NULL DEFAULT 'Sent',
+    resp_dt     DATETIME    DEFAULT NULL,
+    has_resp    TINYINT(1)  NOT NULL DEFAULT 0,
+    cre_dt      DATETIME    NOT NULL,
+    mod_dt      DATETIME    DEFAULT NULL,
+    KEY idx_camp   (camp_id),
+    KEY idx_ld     (ld_id),
+    KEY idx_cntct  (cntct_id),
+    FOREIGN KEY (camp_id) REFERENCES SF_CAMP(camp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
