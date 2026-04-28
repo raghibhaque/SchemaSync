@@ -65,3 +65,28 @@ CREATE TABLE deals (
     KEY idx_owner    (owner_id),
     FOREIGN KEY (company_id) REFERENCES companies(company_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE leads (
+    lead_id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    first_name       VARCHAR(80)  NOT NULL,
+    last_name        VARCHAR(80)  NOT NULL,
+    company_name     VARCHAR(200) DEFAULT NULL,
+    email_address    VARCHAR(150) DEFAULT NULL,
+    phone_number     VARCHAR(40)  DEFAULT NULL,
+    job_title        VARCHAR(100) DEFAULT NULL,
+    lead_status      VARCHAR(50)  NOT NULL DEFAULT 'new',
+    lead_source      VARCHAR(50)  DEFAULT NULL,
+    lead_score       INT          NOT NULL DEFAULT 0,
+    is_converted     BOOLEAN      NOT NULL DEFAULT FALSE,
+    converted_at     TIMESTAMP    DEFAULT NULL,
+    converted_company_id BIGINT   DEFAULT NULL,
+    converted_contact_id BIGINT   DEFAULT NULL,
+    converted_deal_id    BIGINT   DEFAULT NULL,
+    owner_id         BIGINT       DEFAULT NULL,
+    is_deleted       BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP    DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_email    (email_address),
+    KEY idx_status   (lead_status),
+    KEY idx_owner    (owner_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
