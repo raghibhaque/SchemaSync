@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
-import { FileText, ArrowRight, Loader2, Database, Upload } from 'lucide-react'
+import { FileText, ArrowRight, Loader2, Database, Upload, Building2, ShoppingCart } from 'lucide-react'
 import type { ReconciliationResult } from '../../types'
 import { apiClient } from '../../lib/api'
 import { showToast } from '../../lib/toast'
