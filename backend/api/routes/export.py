@@ -289,3 +289,13 @@ async def export_demo_mappings_csv():
     target = parser.parse(wp_path.read_text(), schema_name="wordpress")
     result = engine.reconcile(source, target)
     return _mappings_to_csv(result, "ghost", "wordpress", "mappings_ghost_to_wordpress.csv")
+
+
+# ── CRM demo exports (Salesforce legacy → HubSpot modern) ────────────────────
+
+def _crm_result(req: CRMDemoRequest, dialect: SQLDialect):
+    if not CRM_LEGACY_SCHEMA.exists() or not CRM_MODERN_SCHEMA.exists():
+        api_error(500, ErrorCode.INTERNAL_ERROR, "CRM demo schema files not found")
+    source = parser.parse(CRM_LEGACY_SCHEMA.read_text(), schema_name=req.source_name)
+    target = parser.parse(CRM_MODERN_SCHEMA.read_text(), schema_name=req.target_name)
+    return engine.reconcile(source, target, dialect=dialect), source, target, req
