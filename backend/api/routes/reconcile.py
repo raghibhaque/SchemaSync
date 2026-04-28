@@ -52,6 +52,26 @@ def _strip_ext(filename: str) -> str:
     return re.sub(r"\.(sql|prisma|json)$", "", filename).replace("_schema", "")
 
 
+def _apply_min_confidence(result, min_confidence: float | None):
+    """Move table mappings below min_confidence into the unmatched lists."""
+    if min_confidence is None:
+        return result
+    passing, failing = [], []
+    for tm in result["table_mappings"]:
+        if tm["combined_score"] >= min_confidence:
+            passing.append(tm)
+        else:
+            failing.append(tm)
+    result["table_mappings"] = passing
+    result["unmatched_source_tables"] = result.get("unmatched_source_tables", []) + [
+        tm["source_table"] for tm in failing
+    ]
+    result["unmatched_target_tables"] = result.get("unmatched_target_tables", []) + [
+        tm["target_table"] for tm in failing
+    ]
+    return result
+
+
 # ── Sync endpoints ───────────────────────────────────────────────────────────
 
 @router.post("/demo", response_model=ReconcileResponse, responses=_ERR)
@@ -77,11 +97,11 @@ async def reconcile_raw(req: ReconcileRequest):
     source_schema = parser.parse(req.source_sql, schema_name=req.source_name)
     target_schema = parser.parse(req.target_sql, schema_name=req.target_name)
     result = engine.reconcile(source_schema, target_schema)
-    return ReconcileResponse(status="complete", result=result.to_dict())
+    return ReconcileResponse(status="complete", result=_apply_min_confidence(result.to_dict(), req.min_confidence))
 
 
 @router.post("/files", response_model=ReconcileResponse, responses=_ERR)
-async def reconcile_files(source_file: str, target_file: str):
+async def reconcile_files(source_file: str, target_file: str, min_confidence: float | None = None):
     source_path = UPLOAD_DIR / source_file
     target_path = UPLOAD_DIR / target_file
     if not source_path.exists():
@@ -94,7 +114,7 @@ async def reconcile_files(source_file: str, target_file: str):
     source_schema = _detect_parser(source_text).parse(source_text, schema_name=_strip_ext(source_file))
     target_schema = _detect_parser(target_text).parse(target_text, schema_name=_strip_ext(target_file))
     result = engine.reconcile(source_schema, target_schema)
-    return ReconcileResponse(status="complete", result=result.to_dict())
+    return ReconcileResponse(status="complete", result=_apply_min_confidence(result.to_dict(), min_confidence))
 
 
 @router.post("/demo/stats", responses=_ERR)

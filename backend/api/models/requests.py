@@ -1,6 +1,6 @@
 """API request models."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 _SIMPLE_SOURCE = "CREATE TABLE users (id INT PRIMARY KEY, email VARCHAR(255) NOT NULL, created_at TIMESTAMP);"
@@ -12,6 +12,16 @@ class ReconcileRequest(BaseModel):
     target_sql: str
     source_name: Optional[str] = "source"
     target_name: Optional[str] = "target"
+    min_confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "If set, table mappings whose combined confidence score falls below this threshold "
+            "are excluded from table_mappings and their source/target tables are added to "
+            "unmatched_source_tables / unmatched_target_tables instead."
+        ),
+    )
 
     model_config = {
         "json_schema_extra": {
