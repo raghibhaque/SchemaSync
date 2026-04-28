@@ -140,7 +140,7 @@ export default function UploadPanel({ onResult }: Props) {
         </AnimatePresence>
 
         {/* Demo scenarios */}
-        <motion.div variants={fadeUp(3)} initial="hidden" animate="visible" className="mb-8 space-y-2.5">
+        <motion.div variants={fadeUp(3)} initial="hidden" animate="visible" className="mb-6 flex flex-col gap-2.5">
           <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-white/25">
             Try a demo scenario
           </p>
