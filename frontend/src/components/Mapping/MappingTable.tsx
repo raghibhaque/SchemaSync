@@ -430,7 +430,7 @@ export default function MappingTable({ result }: Props) {
   return (
     <div className="space-y-6">
       <SchemaSummaryCard result={result} />
-      <QuickStatsCard stats={quickStats} />
+      <QuickStatsCard stats={quickStats} result={result} />
       <StatisticsDashboard result={result} />
       <MigrationSummaryCard result={result} />
 

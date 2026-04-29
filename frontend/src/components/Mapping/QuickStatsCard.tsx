@@ -1,14 +1,18 @@
-import { useMemo } from 'react'
-import { AlertCircle, CheckCircle2, TrendingUp, Zap } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { AlertCircle, CheckCircle2, TrendingUp, Zap, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { QuickStats, ComplexityLevel, RiskLevel } from '@/types'
+import type { QuickStats, ComplexityLevel, RiskLevel, ReconciliationResult } from '@/types'
+import { assessDataLossRisk } from '@/lib/statsUtils'
 
 interface QuickStatsCardProps {
   stats: QuickStats | null
+  result?: ReconciliationResult
   compact?: boolean
 }
 
-export function QuickStatsCard({ stats, compact = false }: QuickStatsCardProps) {
+export function QuickStatsCard({ stats, result, compact = false }: QuickStatsCardProps) {
+  const [showRiskDetails, setShowRiskDetails] = useState(false)
+
   if (!stats) {
     return (
       <div className={cn(
@@ -22,6 +26,7 @@ export function QuickStatsCard({ stats, compact = false }: QuickStatsCardProps) 
 
   const complexityColor = _getComplexityColor(stats.complexity_level)
   const riskColor = _getRiskColor(stats.risk_level)
+  const dataLossRisk = result ? assessDataLossRisk(result) : null
 
   if (compact) {
     return (
@@ -103,6 +108,28 @@ export function QuickStatsCard({ stats, compact = false }: QuickStatsCardProps) 
           <span className="ml-1 text-red-400">{stats.critical_conflicts}</span>
         </div>
       </div>
+
+      {stats.risk_level !== 'Low' && dataLossRisk && (
+        <div className="mt-4 border-t border-slate-700 pt-4">
+          <button
+            onClick={() => setShowRiskDetails(!showRiskDetails)}
+            className="flex items-center gap-2 text-sm font-medium text-yellow-400 hover:text-yellow-300"
+          >
+            <Info className="h-4 w-4" />
+            Data Loss Risks ({dataLossRisk.riskFactors.length})
+          </button>
+          {showRiskDetails && (
+            <ul className="mt-2 space-y-1 text-xs text-slate-400">
+              {dataLossRisk.riskFactors.map((factor, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="mt-1 text-yellow-400">•</span>
+                  <span>{factor}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   )
 }
