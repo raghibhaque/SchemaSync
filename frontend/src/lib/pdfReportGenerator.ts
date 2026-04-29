@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { ReconciliationResult } from '../types'
+import { assessDataLossRisk, getMigrationComplexityMetrics } from './statsUtils'
 
 export function generatePDFReport(result: ReconciliationResult): Blob {
   const doc = new jsPDF()
@@ -55,6 +56,24 @@ export function generatePDFReport(result: ReconciliationResult): Blob {
   addKeyValue('Tables in Target', result.summary.tables_in_b)
   addKeyValue('Average Confidence', `${(result.summary.average_confidence * 100).toFixed(1)}%`)
   addKeyValue('Total Conflicts', result.summary.total_conflicts)
+  yPosition += 3
+
+  // Quick Stats Section
+  addSection('Quick Statistics')
+  const matchPercentage = result.summary.tables_in_a > 0
+    ? Math.round((result.summary.tables_matched / result.summary.tables_in_a) * 100)
+    : 0
+  addKeyValue('Match Percentage', `${matchPercentage}%`)
+
+  const metrics = getMigrationComplexityMetrics(result)
+  addKeyValue('Risky Type Conversions', metrics.riskyConversions)
+  addKeyValue('Type Transformations', metrics.typeTransformations)
+  addKeyValue('Dropped Elements', metrics.droppedElements)
+
+  const dataLossRisk = assessDataLossRisk(result)
+  if (dataLossRisk.riskFactors.length > 0) {
+    addKeyValue('Data Loss Risk Factors', dataLossRisk.riskFactors.length)
+  }
   yPosition += 3
 
   // Table Mappings Section
