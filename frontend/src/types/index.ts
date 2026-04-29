@@ -1,3 +1,25 @@
+// Quick stats types
+export type ComplexityLevel = 'Simple' | 'Moderate' | 'Complex';
+export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface QuickStats {
+  total_tables_source: number;
+  total_tables_target: number;
+  total_tables_matched: number;
+  total_columns_source: number;
+  total_columns_target: number;
+  total_columns_matched: number;
+  match_percentage: number;
+  average_confidence: number;
+  complexity_level: ComplexityLevel;
+  risk_level: RiskLevel;
+  risk_score: number;
+  critical_conflicts: number;
+  total_conflicts: number;
+  unmatched_source_count: number;
+  unmatched_target_count: number;
+}
+
 // Schema input types
 export type SchemaFormat = 'sql_ddl' | 'prisma' | 'json_schema';
 
