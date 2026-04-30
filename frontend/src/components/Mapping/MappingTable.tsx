@@ -47,6 +47,7 @@ import ConflictIndicator from '../Review/ConflictIndicator'
 import MigrationSummaryCard from './MigrationSummaryCard'
 import { QuickStatsCard } from './QuickStatsCard'
 import { StatsComparisonView } from './StatsComparisonView'
+import { TableCountSummary } from './TableCountSummary'
 
 interface Props {
   result: ReconciliationResult
@@ -432,6 +433,7 @@ export default function MappingTable({ result }: Props) {
     <div className="space-y-6">
       <SchemaSummaryCard result={result} />
       <QuickStatsCard stats={quickStats} result={result} />
+      <TableCountSummary result={result} />
       <StatsComparisonView stats={quickStats} schemaKey={schemaHash} />
       <StatisticsDashboard result={result} />
       <MigrationSummaryCard result={result} />
